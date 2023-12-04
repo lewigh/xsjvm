@@ -41,7 +41,7 @@ public class Main {
                 interpreter.execute(mainClass);
             }
         } catch (IOException | MemoryManagmentException e) {
-            throw new RuntimeException(e);
+            throw new VmException(e);
         }
     }
 

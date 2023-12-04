@@ -51,7 +51,6 @@ public class Interpreter {
     private boolean executeMethod(ThreadStack threadStack) {
         try {
 
-
             if (threadStack.isEmpty()) {
                 Logger.debug("End of thread%n");
                 return true;
@@ -146,17 +145,10 @@ public class Interpreter {
                         if (operA instanceof Value.Int a && operB instanceof Value.Int b) {
                             frame.push(new Value.Int(a.value() + b.value()));
                         } else {
-                            throw StackFrame.Exception.create("Operators has wrong types %s %s for adding".formatted(operA, operB), frame);
+                            throw StackFrame.Exception.create("Operands have wrong types %s %s for adding".formatted(operA, operB), frame);
                         }
                     }
-                    case IRETURN -> {
-                        StackFrame cur = threadStack.pop();
-                        Value retVal = cur.pop();
-                        threadStack.top().push(retVal);
-                        Logger.retval(frame, retVal);
-                        break loop;
-                    }
-                    case FRETURN -> {
+                    case IRETURN, LRETURN, FRETURN, DRETURN, ARETURN -> {
                         StackFrame cur = threadStack.pop();
                         Value retVal = cur.pop();
                         threadStack.top().push(retVal);
