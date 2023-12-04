@@ -1,5 +1,6 @@
 package com.lewigh.xsjvm.interpreter;
 
+import com.lewigh.xsjvm.StackFrameException;
 import com.lewigh.xsjvm.VmException;
 import com.lewigh.xsjvm.interpreter.runtime.Value;
 import com.lewigh.xsjvm.reader.pool.ConstantPool;
@@ -37,9 +38,9 @@ public class StackFrame {
     public Value pop() {
         Value poll = stack.poll();
 
-//        if (poll == null) {
-//            throw new VmException("");
-//        }
+        if (poll == null) {
+            throw StackFrameException.create("Stack value can not be null", klass, method, ip);
+        }
 
         return poll;
     }
@@ -73,8 +74,7 @@ public class StackFrame {
     public StackFrame fork(@NonNull Klass klass, @NonNull Method method) {
         Value[] locals = new Value[method.maxLocals()];
 
-        // FIXME IS A PROBLEM PLACE AS THERE MAY BE MORE PARAMETERS FOR LOCAL VARIABLES
-        for (int i = locals.length - 1; i >= 0; i--) {
+        for (int i = locals.length - 1; i >= 0 && !stack.isEmpty(); i--) {
             locals[i] = this.pop();
         }
 

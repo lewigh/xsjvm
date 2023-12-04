@@ -6,6 +6,7 @@ import lombok.NonNull;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 
 import static com.lewigh.xsjvm.support.StreamBSupport.readAsInt;
 import static com.lewigh.xsjvm.support.StreamBSupport.readAsShort;

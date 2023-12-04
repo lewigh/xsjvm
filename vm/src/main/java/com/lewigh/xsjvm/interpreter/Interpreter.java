@@ -1,6 +1,8 @@
 package com.lewigh.xsjvm.interpreter;
 
 
+import com.lewigh.xsjvm.StackFrameException;
+import com.lewigh.xsjvm.VmException;
 import com.lewigh.xsjvm.classloader.AppClassLoader;
 import com.lewigh.xsjvm.gc.UnsafeMemoryManager;
 import com.lewigh.xsjvm.interpreter.runtime.*;
@@ -82,13 +84,15 @@ public class Interpreter {
                     frame.inc();
                     frame.push(new Value.Float(2.0f));
                 }
-//                case LDC -> {
-//                    frame.inc();
+                case LDC -> {
+                    frame.inc();
+                    throw StackFrameException.create("Ololo", frame.getKlass(), frame.getMethod(), frame.ip);
+
 //
 //                    byte[] arguments = instruction.arguments();
 //
 //                    frame.push(frame.getConstantPool().get(arguments[0]));
-//                }
+                }
                 case ISTORE -> {
                     frame.inc();
 
