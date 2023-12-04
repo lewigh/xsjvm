@@ -34,7 +34,7 @@ public class Interpreter {
 
         Method mainMethod = mainClass.findMethod(ENTRY_POINT_METHOD__NAME, ENTRY_POINT_METHOD__DESC, InvokeType.STATIC);
 
-        StackFrame mainFrame = createStackFrame(mainClass, mainMethod);
+        StackFrame mainFrame = StackFrame.create(mainClass, mainMethod);
 
         threadStack.push(mainFrame);
 
@@ -94,48 +94,48 @@ public class Interpreter {
 
                     byte[] arguments = instruction.arguments();
 
-                    frame.storeLocal(arguments[0]);
+                    frame.popAndStoreTo(arguments[0]);
                 }
 
                 case ISTORE_0 -> {
                     frame.inc();
-                    frame.storeLocal(0);
+                    frame.popAndStoreTo(0);
                 }
                 case ISTORE_1 -> {
                     frame.inc();
-                    frame.storeLocal(1);
+                    frame.popAndStoreTo(1);
                 }
                 case ISTORE_2 -> {
                     frame.inc();
-                    frame.storeLocal(2);
+                    frame.popAndStoreTo(2);
                 }
 
                 case ISTORE_3 -> {
                     frame.inc();
-                    frame.storeLocal(3);
+                    frame.popAndStoreTo(3);
                 }
                 case FSTORE -> {
                     byte[] arguments = instruction.arguments();
 
-                    frame.storeLocal(arguments[0]);
+                    frame.popAndStoreTo(arguments[0]);
                 }
                 case FSTORE_0 -> {
                     frame.inc();
-                    frame.storeLocal(0);
+                    frame.popAndStoreTo(0);
                 }
                 case ILOAD_0 -> {
                     frame.inc();
-                    frame.push(frame.getLocal(0));
+                    frame.push(frame.load(0));
                 }
                 case ILOAD_1 -> {
                     frame.inc();
-                    frame.push(frame.getLocal(1));
+                    frame.push(frame.load(1));
                 }
                 case ILOAD_2 -> {
-                    frame.push(frame.getLocal(2));
+                    frame.push(frame.load(2));
                 }
                 case FLOAD_0 -> {
-                    frame.push(frame.getLocal(0));
+                    frame.push(frame.load(0));
                 }
                 case IADD -> {
                     frame.inc();
@@ -200,20 +200,20 @@ public class Interpreter {
                 }
                 case ASTORE_0 -> {
                     frame.inc();
-                    frame.storeLocal(0);
+                    frame.popAndStoreTo(0);
                 }
                 case ASTORE_1 -> {
                     frame.inc();
-                    frame.storeLocal(1);
+                    frame.popAndStoreTo(1);
                 }
                 case ASTORE_2 -> {
                     frame.inc();
-                    frame.storeLocal(2);
+                    frame.popAndStoreTo(2);
                 }
                 case ALOAD_0 -> {
                     frame.inc();
 
-                    frame.push(frame.getLocal(0));
+                    frame.push(frame.load(0));
                 }
                 case IASTORE -> storeArrayElement(frame, Jtype.Primitive.INT);
                 case BASTORE -> storeArrayElement(frame, Jtype.Primitive.BYTE);
@@ -388,7 +388,7 @@ public class Interpreter {
     private ClassAndField resolveField(StackFrame frame, Instruction instruction, ThreadStack threadStack) {
         var fieldId = instruction.firstDoubledByteArg();
 
-        ConstantPool cp = frame.getConstantPool();
+        ConstantPool cp = frame.getPoll();
 
         Constant.FieldInfo fieldInfo = cp.resolveFielderInfo((short) fieldId);
 
@@ -409,7 +409,7 @@ public class Interpreter {
     }
 
     public void invoke(InvokeType invokeType, ThreadStack threadStack, StackFrame frame, Instruction instruction) {
-        ConstantPool cp = frame.getConstantPool();
+        ConstantPool cp = frame.getPoll();
 
         var methodIdx = instruction.firstDoubledByteArg();
 
@@ -431,7 +431,7 @@ public class Interpreter {
             System.out.printf("Call native method %s%n", method.name());
 
         } else {
-            StackFrame stackFrame = createStackFrame(targetClass, method, frame);
+            StackFrame stackFrame = frame.fork(targetClass, method);
 
             threadStack.push(stackFrame);
 
@@ -443,7 +443,7 @@ public class Interpreter {
     public void newObject(ThreadStack threadStack, StackFrame frame, Instruction instruction) {
         frame.inc();
 
-        ConstantPool cp = frame.getConstantPool();
+        ConstantPool cp = frame.getPoll();
 
         var classConstId = instruction.firstDoubledByteArg();
 
@@ -485,34 +485,6 @@ public class Interpreter {
 
     }
 
-    private StackFrame createStackFrame(@NonNull Klass klass, @NonNull Method methodMeta) {
-        return createStackFrame(klass, methodMeta, null);
-    }
-
-    private StackFrame createStackFrame(@NonNull Klass klass, @NonNull Method methodMeta, StackFrame previousFrame) {
-
-        ConstantPool constantPool = klass.constantPool();
-
-        Value[] locals = new Value[methodMeta.maxLocals()];
-
-        if (previousFrame != null) {
-            // FIXME IS A PROBLEM PLACE AS THERE MAY BE MORE PARAMETERS FOR LOCAL VARIABLES
-            for (int i = locals.length - 1; i >= 0; i--) {
-                locals[i] = previousFrame.pop();
-            }
-        }
-
-        return new StackFrame(
-                klass.name(),
-                methodMeta.name(),
-                klass,
-                methodMeta,
-                Collections.asLifoQueue(new ArrayDeque<>(methodMeta.maxStack())),
-                locals,
-                constantPool
-        );
-    }
-
     private Klass getClass(String className, ThreadStack threadStack) {
 
         Klass loaded = classLoader.load(className);
@@ -537,7 +509,7 @@ public class Interpreter {
             long classObjectAddress = memoryManager.allocateObject(klass.id(), staticFields, klass.fieldGroup().staticSize());
             klass.state().setStaticAddress(classObjectAddress);
 
-            StackFrame clinitFrame = createStackFrame(klass, clinit);
+            StackFrame clinitFrame = StackFrame.create(klass, clinit);
 
             threadStack.push(clinitFrame);
 
