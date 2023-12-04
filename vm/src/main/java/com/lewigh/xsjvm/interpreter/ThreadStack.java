@@ -1,6 +1,9 @@
 package com.lewigh.xsjvm.interpreter;
 
+import com.lewigh.xsjvm.VmException;
+
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Queue;
 
@@ -29,5 +32,39 @@ public class ThreadStack {
 
     public int size() {
         return frames.size();
+    }
+
+    public static class Exception extends VmException {
+
+        public Exception() {
+        }
+
+        public Exception(String message) {
+            super(message);
+        }
+
+        public Exception(String message, Throwable cause) {
+            super(message, cause);
+        }
+
+        public Exception(Throwable cause) {
+            super(cause);
+        }
+
+        public static Exception create(ThreadStack stack, java.lang.Exception e) {
+
+            ArrayList<StackFrame> stackFrames = new ArrayList<>(stack.frames);
+
+            StringBuilder sb = new StringBuilder();
+
+            for (var f : stackFrames) {
+                sb.append("  %s.%s()".formatted(f.getKlass().name(), f.getMethod().name()));
+                sb.append("\n");
+            }
+
+            return new Exception(
+                    "method call chain:%n%s".formatted(sb.toString()),
+                    e);
+        }
     }
 }

@@ -1,8 +1,6 @@
 package com.lewigh.xsjvm.interpreter;
 
 
-import com.lewigh.xsjvm.StackFrameException;
-import com.lewigh.xsjvm.VmException;
 import com.lewigh.xsjvm.classloader.AppClassLoader;
 import com.lewigh.xsjvm.gc.UnsafeMemoryManager;
 import com.lewigh.xsjvm.interpreter.runtime.*;
@@ -51,226 +49,231 @@ public class Interpreter {
     }
 
     private boolean executeMethod(ThreadStack threadStack) {
-        if (threadStack.isEmpty()) {
-            Logger.debug("End of thread%n");
-            return true;
-        }
+        try {
 
-        StackFrame frame = threadStack.top();
-        Method method = frame.getMethod();
 
-        Logger.invoke(frame);
+            if (threadStack.isEmpty()) {
+                Logger.debug("End of thread%n");
+                return true;
+            }
 
-        loop:
-        for (int i = frame.ip; i < method.instructions().length; i++) {
+            StackFrame frame = threadStack.top();
+            Method method = frame.getMethod();
 
-            var instruction = method.instructions()[i];
-            var opCode = instruction.opCode();
+            Logger.invoke(frame);
 
-            switch (opCode) {
-                case ICONST_0 -> {
-                    frame.inc();
-                    iconst(frame, 0);
-                }
-                case ICONST_1 -> {
-                    frame.inc();
-                    iconst(frame, 1);
-                }
-                case ICONST_2 -> {
-                    frame.inc();
-                    iconst(frame, 2);
-                }
-                case FCONST_2 -> {
-                    frame.inc();
-                    frame.push(new Value.Float(2.0f));
-                }
-                case LDC -> {
-                    frame.inc();
-                    throw StackFrameException.create("Ololo", frame.getKlass(), frame.getMethod(), frame.ip);
+            loop:
+            for (int i = frame.ip; i < method.instructions().length; i++) {
 
-//
+                var instruction = method.instructions()[i];
+                var opCode = instruction.opCode();
+
+                switch (opCode) {
+                    case ICONST_0 -> {
+                        frame.inc();
+                        iconst(frame, 0);
+                    }
+                    case ICONST_1 -> {
+                        frame.inc();
+                        iconst(frame, 1);
+                    }
+                    case ICONST_2 -> {
+                        frame.inc();
+                        iconst(frame, 2);
+                    }
+                    case FCONST_2 -> {
+                        frame.inc();
+                        frame.push(new Value.Float(2.0f));
+                    }
+//                case LDC -> {
+//                    frame.inc();
 //                    byte[] arguments = instruction.arguments();
 //
 //                    frame.push(frame.getConstantPool().get(arguments[0]));
-                }
-                case ISTORE -> {
-                    frame.inc();
+//                }
+                    case ISTORE -> {
+                        frame.inc();
 
-                    byte[] arguments = instruction.arguments();
+                        byte[] arguments = instruction.arguments();
 
-                    frame.popAndStoreTo(arguments[0]);
-                }
-
-                case ISTORE_0 -> {
-                    frame.inc();
-                    frame.popAndStoreTo(0);
-                }
-                case ISTORE_1 -> {
-                    frame.inc();
-                    frame.popAndStoreTo(1);
-                }
-                case ISTORE_2 -> {
-                    frame.inc();
-                    frame.popAndStoreTo(2);
-                }
-
-                case ISTORE_3 -> {
-                    frame.inc();
-                    frame.popAndStoreTo(3);
-                }
-                case FSTORE -> {
-                    byte[] arguments = instruction.arguments();
-
-                    frame.popAndStoreTo(arguments[0]);
-                }
-                case FSTORE_0 -> {
-                    frame.inc();
-                    frame.popAndStoreTo(0);
-                }
-                case ILOAD_0 -> {
-                    frame.inc();
-                    frame.push(frame.load(0));
-                }
-                case ILOAD_1 -> {
-                    frame.inc();
-                    frame.push(frame.load(1));
-                }
-                case ILOAD_2 -> {
-                    frame.push(frame.load(2));
-                }
-                case FLOAD_0 -> {
-                    frame.push(frame.load(0));
-                }
-                case IADD -> {
-                    frame.inc();
-                    if (frame.pop() instanceof Value.Int a && frame.pop() instanceof Value.Int b) {
-                        frame.push(new Value.Int(a.value() + b.value()));
-                    } else {
-                        throw new IllegalArgumentException();
+                        frame.popAndStoreTo(arguments[0]);
                     }
-                }
-                case IRETURN -> {
-                    StackFrame cur = threadStack.pop();
-                    Value retVal = cur.pop();
-                    threadStack.top().push(retVal);
-                    Logger.retval(frame, retVal);
-                    break loop;
-                }
-                case FRETURN -> {
-                    StackFrame cur = threadStack.pop();
-                    Value retVal = cur.pop();
-                    threadStack.top().push(retVal);
-                    Logger.retval(frame, retVal);
-                    break loop;
-                }
-                case RETURN -> {
-                    threadStack.pop();
-                    Logger.ret(frame);
-                    break loop;
-                }
-                case GETSTATIC -> getStatic(frame, instruction, threadStack);
-                case PUTSTATIC -> putStatic(frame, instruction, threadStack);
-                case GETFIELD -> getField(threadStack, frame, instruction);
-                case PUTFIELD -> putField(threadStack, frame, instruction);
-                case INVOKESTATIC -> {
-                    invoke(InvokeType.STATIC, threadStack, frame, instruction);
-                    break loop;
-                }
-                case INVOKESPECIAL -> {
-                    invoke(InvokeType.SPECIAL, threadStack, frame, instruction);
-                    break loop;
-                }
-                case INVOKEVIRTUAL -> {
-                    invoke(InvokeType.VIRTUAL, threadStack, frame, instruction);
-                    break loop;
-                }
-                case INVOKEINTERFACE -> {
-                    invoke(InvokeType.INTERFACE, threadStack, frame, instruction);
-                    break loop;
-                }
-                case DUP -> {
-                    frame.inc();
 
-                    Value poped = frame.pop();
+                    case ISTORE_0 -> {
+                        frame.inc();
+                        frame.popAndStoreTo(0);
+                    }
+                    case ISTORE_1 -> {
+                        frame.inc();
+                        frame.popAndStoreTo(1);
+                    }
+                    case ISTORE_2 -> {
+                        frame.inc();
+                        frame.popAndStoreTo(2);
+                    }
 
-                    frame.push(poped);
-                    frame.push(poped);
-                }
-                case NEW -> newObject(threadStack, frame, instruction);
-                case NEWARRAY -> newArray(threadStack, frame, instruction);
-                case BIPUSH -> {
-                    frame.inc();
-                    frame.push(new Value.Byte(instruction.firstdByteArg()));
-                }
-                case ASTORE_0 -> {
-                    frame.inc();
-                    frame.popAndStoreTo(0);
-                }
-                case ASTORE_1 -> {
-                    frame.inc();
-                    frame.popAndStoreTo(1);
-                }
-                case ASTORE_2 -> {
-                    frame.inc();
-                    frame.popAndStoreTo(2);
-                }
-                case ALOAD_0 -> {
-                    frame.inc();
+                    case ISTORE_3 -> {
+                        frame.inc();
+                        frame.popAndStoreTo(3);
+                    }
+                    case FSTORE -> {
+                        byte[] arguments = instruction.arguments();
 
-                    frame.push(frame.load(0));
-                }
-                case IASTORE -> storeArrayElement(frame, Jtype.Primitive.INT);
-                case BASTORE -> storeArrayElement(frame, Jtype.Primitive.BYTE);
-                case FASTORE -> storeArrayElement(frame, Jtype.Primitive.FLOAT);
-                case DASTORE -> storeArrayElement(frame, Jtype.Primitive.DOUBLE);
-                case CASTORE -> storeArrayElement(frame, Jtype.Primitive.CHAR);
-                case SASTORE -> storeArrayElement(frame, Jtype.Primitive.SHORT);
-                case LASTORE -> storeArrayElement(frame, Jtype.Primitive.LONG);
-                case AASTORE -> storeArrayElement(frame, Jtype.Primitive.REFERENCE);
-                case IALOAD -> loadArrayElement(frame, Jtype.Primitive.INT);
-                case BALOAD -> loadArrayElement(frame, Jtype.Primitive.BYTE);
-                case FALOAD -> loadArrayElement(frame, Jtype.Primitive.FLOAT);
-                case DALOAD -> loadArrayElement(frame, Jtype.Primitive.DOUBLE);
-                case CALOAD -> loadArrayElement(frame, Jtype.Primitive.CHAR);
-                case SALOAD -> loadArrayElement(frame, Jtype.Primitive.SHORT);
-                case LALOAD -> loadArrayElement(frame, Jtype.Primitive.LONG);
-                case AALOAD -> loadArrayElement(frame, Jtype.Primitive.REFERENCE);
-
-                case IF_ICMPEQ -> {
-                    if (icmp(CmpType.EQ, frame, instruction)) {
+                        frame.popAndStoreTo(arguments[0]);
+                    }
+                    case FSTORE_0 -> {
+                        frame.inc();
+                        frame.popAndStoreTo(0);
+                    }
+                    case ILOAD_0 -> {
+                        frame.inc();
+                        frame.push(frame.load(0));
+                    }
+                    case ILOAD_1 -> {
+                        frame.inc();
+                        frame.push(frame.load(1));
+                    }
+                    case ILOAD_2 -> {
+                        frame.push(frame.load(2));
+                    }
+                    case FLOAD_0 -> {
+                        frame.push(frame.load(0));
+                    }
+                    case IADD -> {
+                        frame.inc();
+                        Value operA = frame.pop();
+                        Value operB = frame.pop();
+                        if (operA instanceof Value.Int a && operB instanceof Value.Int b) {
+                            frame.push(new Value.Int(a.value() + b.value()));
+                        } else {
+                            throw StackFrame.Exception.create("Operators has wrong types %s %s for adding".formatted(operA, operB), frame);
+                        }
+                    }
+                    case IRETURN -> {
+                        StackFrame cur = threadStack.pop();
+                        Value retVal = cur.pop();
+                        threadStack.top().push(retVal);
+                        Logger.retval(frame, retVal);
                         break loop;
                     }
-                }
-                case IF_ICMPNE -> {
-                    if (icmp(CmpType.NE, frame, instruction)) {
+                    case FRETURN -> {
+                        StackFrame cur = threadStack.pop();
+                        Value retVal = cur.pop();
+                        threadStack.top().push(retVal);
+                        Logger.retval(frame, retVal);
                         break loop;
                     }
-                }
-                case IF_ICMPLT -> {
-                    if (icmp(CmpType.LT, frame, instruction)) {
+                    case RETURN -> {
+                        threadStack.pop();
+                        Logger.ret(frame);
                         break loop;
                     }
-                }
-                case IF_ICMPGE -> {
-                    if (icmp(CmpType.GE, frame, instruction)) {
+                    case GETSTATIC -> getStatic(frame, instruction, threadStack);
+                    case PUTSTATIC -> putStatic(frame, instruction, threadStack);
+                    case GETFIELD -> getField(threadStack, frame, instruction);
+                    case PUTFIELD -> putField(threadStack, frame, instruction);
+                    case INVOKESTATIC -> {
+                        invoke(InvokeType.STATIC, threadStack, frame, instruction);
                         break loop;
                     }
-                }
-                case IF_ICMPGT -> {
-                    if (icmp(CmpType.GT, frame, instruction)) {
+                    case INVOKESPECIAL -> {
+                        invoke(InvokeType.SPECIAL, threadStack, frame, instruction);
                         break loop;
                     }
-                }
-                case IF_ICMPLE -> {
-                    if (icmp(CmpType.LE, frame, instruction)) {
+                    case INVOKEVIRTUAL -> {
+                        invoke(InvokeType.VIRTUAL, threadStack, frame, instruction);
                         break loop;
                     }
+                    case INVOKEINTERFACE -> {
+                        invoke(InvokeType.INTERFACE, threadStack, frame, instruction);
+                        break loop;
+                    }
+                    case DUP -> {
+                        frame.inc();
+
+                        Value poped = frame.pop();
+
+                        frame.push(poped);
+                        frame.push(poped);
+                    }
+                    case NEW -> newObject(threadStack, frame, instruction);
+                    case NEWARRAY -> newArray(threadStack, frame, instruction);
+                    case BIPUSH -> {
+                        frame.inc();
+                        frame.push(new Value.Byte(instruction.firstdByteArg()));
+                    }
+                    case ASTORE_0 -> {
+                        frame.inc();
+                        frame.popAndStoreTo(0);
+                    }
+                    case ASTORE_1 -> {
+                        frame.inc();
+                        frame.popAndStoreTo(1);
+                    }
+                    case ASTORE_2 -> {
+                        frame.inc();
+                        frame.popAndStoreTo(2);
+                    }
+                    case ALOAD_0 -> {
+                        frame.inc();
+
+                        frame.push(frame.load(0));
+                    }
+                    case IASTORE -> storeArrayElement(frame, Jtype.Primitive.INT);
+                    case BASTORE -> storeArrayElement(frame, Jtype.Primitive.BYTE);
+                    case FASTORE -> storeArrayElement(frame, Jtype.Primitive.FLOAT);
+                    case DASTORE -> storeArrayElement(frame, Jtype.Primitive.DOUBLE);
+                    case CASTORE -> storeArrayElement(frame, Jtype.Primitive.CHAR);
+                    case SASTORE -> storeArrayElement(frame, Jtype.Primitive.SHORT);
+                    case LASTORE -> storeArrayElement(frame, Jtype.Primitive.LONG);
+                    case AASTORE -> storeArrayElement(frame, Jtype.Primitive.REFERENCE);
+                    case IALOAD -> loadArrayElement(frame, Jtype.Primitive.INT);
+                    case BALOAD -> loadArrayElement(frame, Jtype.Primitive.BYTE);
+                    case FALOAD -> loadArrayElement(frame, Jtype.Primitive.FLOAT);
+                    case DALOAD -> loadArrayElement(frame, Jtype.Primitive.DOUBLE);
+                    case CALOAD -> loadArrayElement(frame, Jtype.Primitive.CHAR);
+                    case SALOAD -> loadArrayElement(frame, Jtype.Primitive.SHORT);
+                    case LALOAD -> loadArrayElement(frame, Jtype.Primitive.LONG);
+                    case AALOAD -> loadArrayElement(frame, Jtype.Primitive.REFERENCE);
+
+                    case IF_ICMPEQ -> {
+                        if (icmp(CmpType.EQ, frame, instruction)) {
+                            break loop;
+                        }
+                    }
+                    case IF_ICMPNE -> {
+                        if (icmp(CmpType.NE, frame, instruction)) {
+                            break loop;
+                        }
+                    }
+                    case IF_ICMPLT -> {
+                        if (icmp(CmpType.LT, frame, instruction)) {
+                            break loop;
+                        }
+                    }
+                    case IF_ICMPGE -> {
+                        if (icmp(CmpType.GE, frame, instruction)) {
+                            break loop;
+                        }
+                    }
+                    case IF_ICMPGT -> {
+                        if (icmp(CmpType.GT, frame, instruction)) {
+                            break loop;
+                        }
+                    }
+                    case IF_ICMPLE -> {
+                        if (icmp(CmpType.LE, frame, instruction)) {
+                            break loop;
+                        }
+                    }
+                    case ARRAYLENGTH -> arrayLength(frame);
+                    default -> throw StackFrame.Exception.create("Unrecognized operation %s".formatted(opCode), frame);
                 }
-                case ARRAYLENGTH -> arrayLength(frame);
-                default -> throw new IllegalStateException("Unrecognized operation %s".formatted(opCode));
             }
+            return false;
+        } catch (Exception e) {
+            throw ThreadStack.Exception.create(threadStack, e);
         }
-        return false;
     }
 
     private static void iconst(StackFrame frame, int number) {
@@ -392,7 +395,7 @@ public class Interpreter {
     private ClassAndField resolveField(StackFrame frame, Instruction instruction, ThreadStack threadStack) {
         var fieldId = instruction.firstDoubledByteArg();
 
-        ConstantPool cp = frame.getPoll();
+        ConstantPool cp = frame.getPooll();
 
         Constant.FieldInfo fieldInfo = cp.resolveFielderInfo((short) fieldId);
 
@@ -413,7 +416,7 @@ public class Interpreter {
     }
 
     public void invoke(InvokeType invokeType, ThreadStack threadStack, StackFrame frame, Instruction instruction) {
-        ConstantPool cp = frame.getPoll();
+        ConstantPool cp = frame.getPooll();
 
         var methodIdx = instruction.firstDoubledByteArg();
 
@@ -447,7 +450,7 @@ public class Interpreter {
     public void newObject(ThreadStack threadStack, StackFrame frame, Instruction instruction) {
         frame.inc();
 
-        ConstantPool cp = frame.getPoll();
+        ConstantPool cp = frame.getPooll();
 
         var classConstId = instruction.firstDoubledByteArg();
 

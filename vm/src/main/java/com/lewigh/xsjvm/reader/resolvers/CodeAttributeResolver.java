@@ -7,6 +7,7 @@ import lombok.NonNull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import static com.lewigh.xsjvm.support.StreamBSupport.readAsInt;
 import static com.lewigh.xsjvm.support.StreamBSupport.readAsShort;
@@ -84,8 +85,7 @@ public class CodeAttributeResolver implements AttributeResolvingStrategy {
             realIdx++;
         }
 
-
-        return operations;
+        return Arrays.copyOf(operations, realIdx);
     }
 
     private static ExceptionTable[] resolveExceptionTable(int len, InputStream is) throws IOException {
