@@ -93,8 +93,8 @@ public class AppClassLoader {
     }
 
     private FieldGroup resolveFields(ClassFile classFile, Klass superClass) {
-        FieldInfo[] fields = classFile.fields();
-        LinkedHashMap<String, Field> kFields = new LinkedHashMap<>(fields.length);
+        FieldInfo[] infoFields = classFile.fields();
+        LinkedHashMap<String, Field> kFields = new LinkedHashMap<>(infoFields.length);
 
         long instanceOffset = 0;
         long staticOffset = 0;
@@ -109,24 +109,24 @@ public class AppClassLoader {
             kFields.putAll(superFields);
         }
 
-        for (var f : fields) {
+        for (var info : infoFields) {
 
-            TypeAndIdx typeAndIdx = resolveType(f.descriptor(), 0);
+            TypeAndIdx typeAndIdx = resolveType(info.descriptor(), 0);
 
             Field field = new Field(
-                    f.name(),
+                    info.name(),
                     typeAndIdx.type(),
-                    computeAccess(f),
-                    f.isStatic(),
-                    f.isFinal(),
-                    f.isVolatile(),
-                    f.isTransient(),
-                    f.isSynthetic(),
-                    f.isEnum(),
-                    f.isStatic() ? staticOffset : instanceOffset
+                    computeAccess(info),
+                    info.isStatic(),
+                    info.isFinal(),
+                    info.isVolatile(),
+                    info.isTransient(),
+                    info.isSynthetic(),
+                    info.isEnum(),
+                    info.isStatic() ? staticOffset : instanceOffset
             );
 
-            kFields.put(classFile.thisName() + "." + f.name(), field);
+            kFields.put(classFile.thisName() + "." + info.name(), field);
 
             Jtype type = field.type();
 
@@ -135,7 +135,7 @@ public class AppClassLoader {
                     .getAlign()
                     .getTotal();
 
-            if (f.isStatic()) {
+            if (info.isStatic()) {
                 staticOffset += fieldsSize;
             } else {
                 instanceOffset += fieldsSize;

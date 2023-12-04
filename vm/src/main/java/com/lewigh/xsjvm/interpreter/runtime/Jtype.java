@@ -37,8 +37,8 @@ public sealed interface Jtype {
     @RequiredArgsConstructor
     @Getter
     enum Primitive implements Jtype {
-        BYTE('B', Size.B1, Size.B2),
-        BOOL('Z', Size.B1, Size.B2),
+        BYTE('B', Size.B1, Size.B1),
+        BOOL('Z', Size.B1, Size.B1),
         SHORT('S', Size.B2, Size.B2),
         INT('I', Size.B4, Size.B4),
         CHAR('C', Size.B4, Size.B4),
