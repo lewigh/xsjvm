@@ -12,4 +12,6 @@ Then, before you start the virtual machine via terminal or IDE, simply specify t
 Like that (on Win):
 ![image](https://github.com/lewigh/xsjvm/assets/21281158/b3c9bbf9-f30e-425c-9ea2-4047369087c8)
 
+Currently, the JVM has limited support for executing code from the neighboring Sampler project. 
+
 
