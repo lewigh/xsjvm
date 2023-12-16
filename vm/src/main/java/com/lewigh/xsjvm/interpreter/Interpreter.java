@@ -263,6 +263,8 @@ public class Interpreter {
                 }
             }
             return false;
+        } catch (ThreadStack.Exception e) {
+            throw e;
         } catch (Exception e) {
             throw ThreadStack.Exception.create(threadStack, e);
         }

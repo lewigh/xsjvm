@@ -36,18 +36,18 @@ public class ThreadStack {
 
     public static class Exception extends VmException {
 
-        public Exception() {
+        private Exception() {
         }
 
-        public Exception(String message) {
+        private Exception(String message) {
             super(message);
         }
 
-        public Exception(String message, Throwable cause) {
+        private Exception(String message, Throwable cause) {
             super(message, cause);
         }
 
-        public Exception(Throwable cause) {
+        private Exception(Throwable cause) {
             super(cause);
         }
 
