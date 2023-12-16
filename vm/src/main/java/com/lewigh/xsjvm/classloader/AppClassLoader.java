@@ -1,20 +1,20 @@
 package com.lewigh.xsjvm.classloader;
 
-import com.lewigh.xsjvm.interpreter.runtime.*;
-import com.lewigh.xsjvm.reader.ClassReader;
-import com.lewigh.xsjvm.reader.info.ClassFile;
-import com.lewigh.xsjvm.reader.info.FieldInfo;
-import com.lewigh.xsjvm.reader.info.MethodInfo;
-import com.lewigh.xsjvm.reader.info.attribute.AttributeInfo;
-import com.lewigh.xsjvm.reader.info.attribute.CodeAttribute;
-import com.lewigh.xsjvm.reader.info.attribute.ExceptionTable;
-import com.lewigh.xsjvm.reader.info.attribute.Instruction;
+import com.lewigh.xsjvm.engine.runtime.*;
+import com.lewigh.xsjvm.classloader.reader.ClassReader;
+import com.lewigh.xsjvm.classloader.reader.info.ClassFile;
+import com.lewigh.xsjvm.classloader.reader.info.FieldInfo;
+import com.lewigh.xsjvm.classloader.reader.info.MethodInfo;
+import com.lewigh.xsjvm.classloader.reader.info.attribute.AttributeInfo;
+import com.lewigh.xsjvm.classloader.reader.info.attribute.CodeAttribute;
+import com.lewigh.xsjvm.classloader.reader.info.attribute.ExceptionTable;
+import com.lewigh.xsjvm.classloader.reader.info.attribute.Instruction;
 import lombok.NonNull;
 
 import java.nio.file.Path;
 import java.util.*;
 
-import static com.lewigh.xsjvm.interpreter.runtime.Access.*;
+import static com.lewigh.xsjvm.engine.runtime.Access.*;
 import static java.util.Objects.requireNonNullElseGet;
 
 public class AppClassLoader {

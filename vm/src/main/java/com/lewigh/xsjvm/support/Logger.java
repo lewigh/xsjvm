@@ -1,6 +1,6 @@
 package com.lewigh.xsjvm.support;
 
-import com.lewigh.xsjvm.interpreter.StackFrame;
+import com.lewigh.xsjvm.engine.StackFrame;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 

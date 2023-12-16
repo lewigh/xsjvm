@@ -1,6 +1,6 @@
 package com.lewigh.xsjvm.classloader;
 
-import com.lewigh.xsjvm.interpreter.runtime.Klass;
+import com.lewigh.xsjvm.engine.runtime.Klass;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -3,8 +3,8 @@ package com.lewigh.xsjvm;
 import com.lewigh.xsjvm.classloader.AppClassLoader;
 import com.lewigh.xsjvm.classloader.ClassStorage;
 import com.lewigh.xsjvm.gc.UnsafeMemoryManager;
-import com.lewigh.xsjvm.interpreter.Interpreter;
-import com.lewigh.xsjvm.reader.ClassReader;
+import com.lewigh.xsjvm.engine.ExecutionEngine;
+import com.lewigh.xsjvm.classloader.reader.ClassReader;
 import lombok.NonNull;
 
 import java.io.IOException;
@@ -30,15 +30,14 @@ public class Main {
             ClassStorage classStorage = new ClassStorage();
 
             try (Stream<Path> systemPathStream = resolveClassPath(rtClassesPath);
-                 Stream<Path> appPathStream = resolveClassPath(appClassesPath)
-            ) {
+                 Stream<Path> appPathStream = resolveClassPath(appClassesPath)) {
 
                 var classPath = Stream.concat(systemPathStream, appPathStream).toList();
 
                 var classLoader = new AppClassLoader(classPath, reader, classStorage);
-                var interpreter = new Interpreter(classLoader, allocator);
+                var engine = new ExecutionEngine(classLoader, allocator);
 
-                interpreter.execute(mainClass);
+                engine.execute(mainClass);
             }
         } catch (IOException | MemoryManagmentException e) {
             throw new VmException(e);

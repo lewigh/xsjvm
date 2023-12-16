@@ -1,9 +1,9 @@
 package com.lewigh.xsjvm.gc;
 
 import com.lewigh.xsjvm.MemoryManagmentException;
-import com.lewigh.xsjvm.interpreter.runtime.Field;
-import com.lewigh.xsjvm.interpreter.runtime.Jtype;
-import com.lewigh.xsjvm.interpreter.runtime.Value;
+import com.lewigh.xsjvm.engine.runtime.Field;
+import com.lewigh.xsjvm.engine.runtime.Jtype;
+import com.lewigh.xsjvm.engine.runtime.Value;
 import sun.misc.Unsafe;
 
 import java.util.Collection;
