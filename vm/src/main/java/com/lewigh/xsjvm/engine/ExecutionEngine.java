@@ -2,6 +2,7 @@ package com.lewigh.xsjvm.engine;
 
 
 import com.lewigh.xsjvm.classloader.AppClassLoader;
+import com.lewigh.xsjvm.classloader.reader.info.attribute.ExceptionTable;
 import com.lewigh.xsjvm.gc.UnsafeMemoryManager;
 import com.lewigh.xsjvm.engine.runtime.*;
 import com.lewigh.xsjvm.classloader.reader.info.attribute.Instruction;
@@ -277,6 +278,7 @@ public class ExecutionEngine {
                         frame.push(new Value.Long(v.value()));
                     }
                     case ARRAYLENGTH -> arrayLength(frame);
+                    case ATHROW -> aThrow(frame);
                     default -> throw StackFrame.Exception.create("Unrecognized operation %s".formatted(opCode), frame);
                 }
             }
@@ -326,7 +328,7 @@ public class ExecutionEngine {
 
     private boolean icmp(CmpType cmpType, StackFrame frame, Instruction instruction) {
         frame.inc();
-        var jumpIp = instruction.firstDoubledByteArg();
+        var jumpIp = instruction.x2BytesAsShortArg();
 
         var b = frame.pop().asInt();
         var a = frame.pop().asInt();
@@ -339,7 +341,7 @@ public class ExecutionEngine {
                 || (cmpType == CmpType.LE && a <= b);
 
         if (condRes) {
-            frame.goTo((short) jumpIp);
+            frame.goTo(jumpIp);
             return true;
         }
         return false;
@@ -405,11 +407,11 @@ public class ExecutionEngine {
     }
 
     private ClassAndField resolveField(StackFrame frame, Instruction instruction, ThreadStack threadStack) {
-        var fieldId = instruction.firstDoubledByteArg();
+        var fieldId = instruction.x2BytesAsShortArg();
 
         ConstantPool cp = frame.getPool();
 
-        Constant.FieldInfo fieldInfo = cp.resolveFieldInfo((short) fieldId);
+        Constant.FieldInfo fieldInfo = cp.resolveFieldInfo(fieldId);
 
         String className = cp.resolveClassRef(fieldInfo.classIndex());
 
@@ -430,9 +432,9 @@ public class ExecutionEngine {
     public void invoke(InvokeType invokeType, ThreadStack threadStack, StackFrame frame, Instruction instruction) {
         ConstantPool cp = frame.getPool();
 
-        var methodIdx = instruction.firstDoubledByteArg();
+        var methodIdx = instruction.x2BytesAsShortArg();
 
-        Constant.MethodRefInfo methodRefInfo = cp.resolveMethorRefInfo((short) methodIdx);
+        Constant.MethodRefInfo methodRefInfo = cp.resolveMethorRefInfo(methodIdx);
 
         String className = cp.resolveClassRef(methodRefInfo.classIndex());
 
@@ -464,9 +466,9 @@ public class ExecutionEngine {
 
         ConstantPool cp = frame.getPool();
 
-        var classConstId = instruction.firstDoubledByteArg();
+        var classConstId = instruction.x2BytesAsShortArg();
 
-        String className = cp.resolveClassRef((short) classConstId);
+        String className = cp.resolveClassRef(classConstId);
 
         Klass newInstanceClassInfo = getClass(className, threadStack);
 
@@ -502,6 +504,12 @@ public class ExecutionEngine {
 
         frame.push(Value.Reference.from(arrayRef));
 
+    }
+
+    private void aThrow(StackFrame frame) {
+        frame.inc();
+
+        ExceptionTable[] exceptionTables = frame.getMethod().exceptionTable();
     }
 
     private Klass getClass(String className, ThreadStack threadStack) {

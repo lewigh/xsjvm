@@ -74,7 +74,6 @@ public class CodeAttributeResolver implements AttributeResolvingStrategy {
             byte[] operands = new byte[opCode.getOperandAmount()];
 
             if (opCode.getOperandAmount() > 0) {
-
                 for (int j = 0; j < opCode.getOperandAmount(); j++) {
                     operands[j] = bytes[i + j + 1];
                     skip++;
@@ -93,12 +92,12 @@ public class CodeAttributeResolver implements AttributeResolvingStrategy {
 
         for (int i = 0; i < len; i++) {
 
-            short start_pc = readAsShort(is);
-            short end_pc = readAsShort(is);
-            short handler_pc = readAsShort(is);
-            short catch_type = readAsShort(is);
+            short startPc = readAsShort(is);
+            short endPc = readAsShort(is);
+            short handlerPc = readAsShort(is);
+            short catchType = readAsShort(is);
 
-            exceptionTable[i] = new ExceptionTable(start_pc, end_pc, handler_pc, catch_type);
+            exceptionTable[i] = new ExceptionTable(startPc, endPc, handlerPc, catchType);
         }
 
         return exceptionTable;

@@ -1,5 +1,6 @@
 package com.lewigh.xsjvm.classloader.reader.info.attribute;
 
+import com.lewigh.xsjvm.engine.runtime.Value;
 import lombok.NonNull;
 
 import java.util.Arrays;
@@ -11,8 +12,8 @@ public record Instruction(@NonNull OpCode opCode, @NonNull byte[] arguments) {
         return arguments[0];
     }
 
-    public int firstDoubledByteArg() {
-        return (arguments[0] << 8) | arguments[1] & 0xff;
+    public short x2BytesAsShortArg() {
+        return (short) ((arguments[0] << 8) | arguments[1] & 0xff);
     }
 
     @Override
@@ -37,4 +38,5 @@ public record Instruction(@NonNull OpCode opCode, @NonNull byte[] arguments) {
                 ", arguments=" + Arrays.toString(arguments) +
                 '}';
     }
+
 }
