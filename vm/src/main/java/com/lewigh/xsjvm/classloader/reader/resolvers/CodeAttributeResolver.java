@@ -56,14 +56,12 @@ public class CodeAttributeResolver implements AttributeResolvingStrategy {
     }
 
     private static Instruction[] resolveOperations(byte[] bytes) {
-
         Instruction[] operations = new Instruction[bytes.length];
 
         int skip = 0;
         int realIdx = 0;
 
         for (int i = 0; i < bytes.length; i++) {
-
             if (skip > 0) {
                 skip--;
                 continue;
@@ -71,20 +69,22 @@ public class CodeAttributeResolver implements AttributeResolvingStrategy {
 
             int unsignedInt = Byte.toUnsignedInt(bytes[i]);
             var opCode = OpCode.byCode(unsignedInt);
-            byte[] operands = new byte[opCode.getOperandAmount()];
+            int operandsBytesLen = opCode.getOperandsType().getBytesLen();
+            byte[] operandsBuffer = new byte[operandsBytesLen];
 
-            if (opCode.getOperandAmount() > 0) {
-                for (int j = 0; j < opCode.getOperandAmount(); j++) {
-                    operands[j] = bytes[i + j + 1];
+            if (operandsBytesLen > 0) {
+                for (int j = 0; j < operandsBytesLen; j++) {
+                    operandsBuffer[j] = bytes[i + j + 1];
                     skip++;
                 }
             }
 
-            operations[realIdx] = new Instruction(opCode, operands);
+            operations[realIdx] = new Instruction(opCode, opCode.getOperandsType().retrieve(operandsBuffer));
             realIdx++;
         }
 
         return Arrays.copyOf(operations, realIdx);
+
     }
 
     private static ExceptionTable[] resolveExceptionTable(int len, InputStream is) throws IOException {

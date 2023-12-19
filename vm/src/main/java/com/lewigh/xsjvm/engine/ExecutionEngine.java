@@ -106,9 +106,7 @@ public class ExecutionEngine {
                     case ISTORE -> {
                         frame.inc();
 
-                        byte[] arguments = instruction.arguments();
-
-                        frame.popAndStoreTo(arguments[0]);
+                        frame.popAndStoreTo(instruction.firsOperand());
                     }
 
                     case ISTORE_0 -> {
@@ -128,11 +126,7 @@ public class ExecutionEngine {
                         frame.inc();
                         frame.popAndStoreTo(3);
                     }
-                    case FSTORE -> {
-                        byte[] arguments = instruction.arguments();
-
-                        frame.popAndStoreTo(arguments[0]);
-                    }
+                    case FSTORE -> frame.popAndStoreTo(instruction.firsOperand());
                     case FSTORE_0 -> {
                         frame.inc();
                         frame.popAndStoreTo(0);
@@ -205,7 +199,7 @@ public class ExecutionEngine {
                     case NEWARRAY -> newArray(threadStack, frame, instruction);
                     case BIPUSH -> {
                         frame.inc();
-                        frame.push(new Value.Byte(instruction.firstdByteArg()));
+                        frame.push(new Value.Byte((byte) instruction.firsOperand()));
                     }
                     case ASTORE_0 -> {
                         frame.inc();
@@ -328,7 +322,7 @@ public class ExecutionEngine {
 
     private boolean icmp(CmpType cmpType, StackFrame frame, Instruction instruction) {
         frame.inc();
-        var jumpIp = instruction.x2BytesAsShortArg();
+        var jumpIp = instruction.firsOperand();
 
         var b = frame.pop().asInt();
         var a = frame.pop().asInt();
@@ -407,7 +401,7 @@ public class ExecutionEngine {
     }
 
     private ClassAndField resolveField(StackFrame frame, Instruction instruction, ThreadStack threadStack) {
-        var fieldId = instruction.x2BytesAsShortArg();
+        var fieldId = instruction.firsOperand();
 
         ConstantPool cp = frame.getPool();
 
@@ -432,7 +426,7 @@ public class ExecutionEngine {
     public void invoke(InvokeType invokeType, ThreadStack threadStack, StackFrame frame, Instruction instruction) {
         ConstantPool cp = frame.getPool();
 
-        var methodIdx = instruction.x2BytesAsShortArg();
+        var methodIdx = instruction.firsOperand();
 
         Constant.MethodRefInfo methodRefInfo = cp.resolveMethorRefInfo(methodIdx);
 
@@ -466,7 +460,7 @@ public class ExecutionEngine {
 
         ConstantPool cp = frame.getPool();
 
-        var classConstId = instruction.x2BytesAsShortArg();
+        var classConstId = instruction.firsOperand();
 
         String className = cp.resolveClassRef(classConstId);
 
@@ -485,7 +479,7 @@ public class ExecutionEngine {
     private void newArray(ThreadStack threadStack, StackFrame frame, Instruction instruction) {
         frame.inc();
 
-        byte typeCode = instruction.arguments()[0];
+        byte typeCode = (byte) instruction.firsOperand();
 
         var s = frame.pop();
 

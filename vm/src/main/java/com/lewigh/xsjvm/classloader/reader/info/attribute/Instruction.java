@@ -1,19 +1,31 @@
 package com.lewigh.xsjvm.classloader.reader.info.attribute;
 
-import com.lewigh.xsjvm.engine.runtime.Value;
 import lombok.NonNull;
 
 import java.util.Arrays;
 import java.util.Objects;
 
-public record Instruction(@NonNull OpCode opCode, @NonNull byte[] arguments) {
+public record Instruction(@NonNull OpCode opCode, @NonNull short[] operamds) {
 
-    public byte firstdByteArg() {
-        return arguments[0];
+    public short firsOperand() {
+        if (operamds.length == 0) {
+            throw new IllegalStateException();
+        }
+        return operamds[0];
     }
 
-    public short x2BytesAsShortArg() {
-        return (short) ((arguments[0] << 8) | arguments[1] & 0xff);
+    public short secondOperand() {
+        if (operamds.length == 0) {
+            throw new IllegalStateException();
+        }
+        return operamds[1];
+    }
+
+    public short thirdOperand() {
+        if (operamds.length == 0) {
+            throw new IllegalStateException();
+        }
+        return operamds[2];
     }
 
     @Override
@@ -21,13 +33,13 @@ public record Instruction(@NonNull OpCode opCode, @NonNull byte[] arguments) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Instruction that = (Instruction) o;
-        return opCode == that.opCode && Arrays.equals(arguments, that.arguments);
+        return opCode == that.opCode && Arrays.equals(operamds, that.operamds);
     }
 
     @Override
     public int hashCode() {
         int result = Objects.hash(opCode);
-        result = 31 * result + Arrays.hashCode(arguments);
+        result = 31 * result + Arrays.hashCode(operamds);
         return result;
     }
 
@@ -35,8 +47,7 @@ public record Instruction(@NonNull OpCode opCode, @NonNull byte[] arguments) {
     public String toString() {
         return "Instruction{" +
                 "opCode=" + opCode +
-                ", arguments=" + Arrays.toString(arguments) +
+                ", operamds=" + Arrays.toString(operamds) +
                 '}';
     }
-
 }
