@@ -347,23 +347,35 @@ public enum OpCode {
                 case UBYTE, UBYTE_UBYTE -> {
                     short[] shorts = new short[buffer.length];
                     for (int i = 0; i < buffer.length; i++) {
-                        shorts[i] = (short) Byte.toUnsignedInt(buffer[i]);
+                        shorts[i] = unsignAsShort(buffer[i]);
                     }
                     yield shorts;
                 }
                 case UBYTE_BYTE -> new short[]{
-                        (short) Byte.toUnsignedInt(buffer[0]),
+                        unsignAsShort(buffer[0]),
                         buffer[1]
                 };
-                case C_SHORT, C_SHORT_ZERO_ZERO -> new short[]{(short) ((buffer[0] << 8) | buffer[1] & 0xff)};
+                case C_SHORT, C_SHORT_ZERO_ZERO -> new short[]{joinToShort(buffer)};
                 case C_SHORT_UBYTE, C_SHORT_UBYTE_ZERO -> new short[]{
-                        (short) ((buffer[0] << 8) | buffer[1] & 0xff),
-                        (short) Byte.toUnsignedInt(buffer[2])
+                        joinToShort(buffer),
+                        unsignAsShort(buffer[2])
                 };
-                case C_INT -> new short[]{(short) ((buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3] & 0xff)};
+                case C_INT -> new short[]{joinToInt(buffer)};
                 case EMPTY -> new short[0];
             };
         }
+    }
+
+    private static short joinToShort(byte[] buffer) {
+        return (short) ((buffer[0] << 8) | buffer[1] & 0xff);
+    }
+
+    private static short joinToInt(byte[] buffer) {
+        return (short) ((buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3] & 0xff);
+    }
+
+    private static short unsignAsShort(byte bt) {
+        return (short) Byte.toUnsignedInt(bt);
     }
 
 }
