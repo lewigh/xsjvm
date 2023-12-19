@@ -1,5 +1,6 @@
 package com.lewigh.xsjvm.classloader.reader.info.attribute;
 
+import com.lewigh.xsjvm.engine.runtime.Value;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -324,14 +325,26 @@ public enum OpCode {
                 .orElseThrow();
     }
 
+    public Value[] resolveEmptyArgs(byte[] args) {
+        return new Value[0];
+    }
 
-    sealed interface Property {
+    public Value[] resolveByteArgs(byte[] args) {
+        return resolveBytesArgs(args, 1);
+    }
 
-        final class Empty implements Property {
+    public Value[] resolveTwoBytesArgs(byte[] args) {
+        return resolveBytesArgs(args, 2);
+    }
+
+    public Value[] resolveBytesArgs(byte[] args, int amount) {
+        Value.Byte[] bytes = new Value.Byte[args.length];
+
+        for (int i = 0; i < bytes.length; i++) {
+            bytes[i] = new Value.Byte(args[i]);
         }
 
-        record Filler() implements Property {
-        }
+        return bytes;
     }
 
 }
