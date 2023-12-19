@@ -324,4 +324,14 @@ public enum OpCode {
                 .orElseThrow();
     }
 
+
+    sealed interface Property {
+
+        final class Empty implements Property {
+        }
+
+        record Filler() implements Property {
+        }
+    }
+
 }
