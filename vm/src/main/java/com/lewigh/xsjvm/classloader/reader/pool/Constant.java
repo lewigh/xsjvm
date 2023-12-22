@@ -1,26 +1,53 @@
 package com.lewigh.xsjvm.classloader.reader.pool;
 
+import com.lewigh.xsjvm.engine.runtime.IntoValue;
+import com.lewigh.xsjvm.engine.runtime.Value;
+
 public sealed interface Constant {
 
-    record ConstantInteger(int value) implements Constant {
+    record ConstantInteger(int value) implements Constant, IntoValue {
+        @Override
+        public Value into() {
+            return new Value.Int(value);
+        }
     }
 
-    record ConstantFloat(float value) implements Constant {
+    record ConstantFloat(float value) implements Constant, IntoValue {
+        @Override
+        public Value into() {
+            return new Value.Float(value);
+        }
     }
 
-    record ConstantLong(long value) implements Constant {
+    record ConstantLong(long value) implements Constant, IntoValue {
+        @Override
+        public Value into() {
+            return new Value.Long(value);
+        }
     }
 
-    record ConstantDouble(double value) implements Constant {
+    record ConstantDouble(double value) implements Constant, IntoValue {
+        @Override
+        public Value into() {
+            return new Value.Double(value);
+        }
     }
 
-    record ConstantString(short index) implements Constant {
+    record ConstantString(short index) implements Constant, IntoValue {
+        @Override
+        public Value into() {
+            return Value.Reference.from(index);
+        }
     }
 
     record Utf8(String text) implements Constant {
     }
 
-    record Class(short nameIndex) implements Constant {
+    record Class(short nameIndex) implements Constant, IntoValue {
+        @Override
+        public Value into() {
+            return Value.Reference.from(nameIndex);
+        }
     }
 
     record DynamicInfo(short bootstrapMethodAttrIndex, short nameAndTypeIndex) implements Constant {

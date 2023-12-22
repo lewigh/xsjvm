@@ -1,6 +1,8 @@
 package com.lewigh.xsjvm.engine.runtime;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.ToString;
 
 public sealed interface Value {
 
@@ -101,6 +103,8 @@ public sealed interface Value {
     }
 
     @Getter
+    @EqualsAndHashCode
+    @ToString
     non-sealed class Reference implements Value {
 
         private final long value;

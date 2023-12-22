@@ -11,6 +11,7 @@ import com.lewigh.xsjvm.classloader.reader.pool.ConstantPool;
 import com.lewigh.xsjvm.support.Logger;
 import lombok.NonNull;
 
+import java.awt.*;
 import java.util.*;
 
 import static com.lewigh.xsjvm.SymbolTable.ENTRY_POINT_METHOD_DESC;
@@ -39,11 +40,11 @@ public class ExecutionEngine {
 
         threadStack.push(mainFrame);
 
-        executeThreadStack(threadStack);
+        runThreadLoop(threadStack);
     }
 
 
-    private void executeThreadStack(ThreadStack threadStack) {
+    private void runThreadLoop(ThreadStack threadStack) {
         for (; ; ) {
             if (executeMethod(threadStack)) break;
         }
@@ -97,12 +98,18 @@ public class ExecutionEngine {
                         frame.inc();
                         frame.push(new Value.Float(2.0f));
                     }
-//                case LDC -> {
-//                    frame.inc();
-//                    byte[] arguments = instruction.arguments();
-//
-//                    frame.push(frame.getConstantPool().get(arguments[0]));
-//                }
+                    case LDC -> {
+                        frame.inc();
+                        short cpRef = instruction.firsOperand();
+
+                        Constant constant = frame.getPool().get(cpRef);
+
+                        if (constant instanceof IntoValue value) {
+                            frame.push(value.into());
+                        } else {
+                            throw StackFrame.Exception.create("Cannot operate LDC with CP value that is not IntoValue [%s]".formatted(constant), frame);
+                        }
+                    }
                     case ISTORE -> {
                         frame.inc();
 
@@ -212,6 +219,15 @@ public class ExecutionEngine {
                     case ASTORE_2 -> {
                         frame.inc();
                         frame.popAndStoreTo(2);
+                    }
+                    case ASTORE_3 -> {
+                        frame.inc();
+                        frame.popAndStoreTo(3);
+                    }
+                    case ASTORE -> {
+                        frame.inc();
+                        short localId = instruction.firsOperand();
+                        frame.popAndStoreTo(localId);
                     }
                     case ALOAD_0 -> {
                         frame.inc();
