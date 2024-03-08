@@ -11,7 +11,6 @@ import com.lewigh.xsjvm.classloader.reader.pool.ConstantPool;
 import com.lewigh.xsjvm.support.Logger;
 import lombok.NonNull;
 
-import java.awt.*;
 import java.util.*;
 
 import static com.lewigh.xsjvm.SymbolTable.ENTRY_POINT_METHOD_DESC;
@@ -30,13 +29,10 @@ public class ExecutionEngine {
 
 
     public void execute(String className) {
-        ThreadStack threadStack = new ThreadStack();
-
-        Klass mainClass = getClass(className, threadStack);
-
-        Method mainMethod = mainClass.findMethod(ENTRY_POINT_METHOD_NAME, ENTRY_POINT_METHOD_DESC, InvokeType.STATIC);
-
-        StackFrame mainFrame = StackFrame.create(mainClass, mainMethod);
+        var threadStack = new ThreadStack();
+        var mainClass = getClass(className, threadStack);
+        var mainMethod = mainClass.findMethod(ENTRY_POINT_METHOD_NAME, ENTRY_POINT_METHOD_DESC, InvokeType.STATIC);
+        var mainFrame = StackFrame.create(mainClass, mainMethod);
 
         threadStack.push(mainFrame);
 
@@ -58,8 +54,8 @@ public class ExecutionEngine {
                 return true;
             }
 
-            StackFrame frame = threadStack.top();
-            Method method = frame.getMethod();
+            var frame = threadStack.top();
+            var method = frame.getMethod();
 
             Logger.invoke(frame);
 
@@ -98,18 +94,7 @@ public class ExecutionEngine {
                         frame.inc();
                         frame.push(new Value.Float(2.0f));
                     }
-                    case LDC -> {
-                        frame.inc();
-                        short cpRef = instruction.firsOperand();
-
-                        Constant constant = frame.getPool().get(cpRef);
-
-                        if (constant instanceof IntoValue value) {
-                            frame.push(value.into());
-                        } else {
-                            throw StackFrame.Exception.create("Cannot operate LDC with CP value that is not IntoValue [%s]".formatted(constant), frame);
-                        }
-                    }
+                    case LDC -> ldc(frame, instruction);
                     case ISTORE -> {
                         frame.inc();
 
@@ -163,7 +148,7 @@ public class ExecutionEngine {
                         }
                     }
                     case IRETURN, LRETURN, FRETURN, DRETURN, ARETURN -> {
-                        StackFrame cur = threadStack.pop();
+                        var cur = threadStack.pop();
                         Value retVal = cur.pop();
                         threadStack.top().push(retVal);
                         Logger.retval(frame, retVal);
@@ -298,6 +283,27 @@ public class ExecutionEngine {
         } catch (Exception e) {
             throw ThreadStack.Exception.create(threadStack, e);
         }
+    }
+
+    private static void ldc(StackFrame frame, Instruction instruction) {
+        frame.inc();
+        short cpRef = instruction.firsOperand();
+
+        Constant constant = frame.getPool().get(cpRef);
+
+        if (constant instanceof IntoValue i) {
+            frame.push(i.into());
+        } else {
+            throw StackFrame.Exception.create("Cannot operate LDC with CP value that is not IntoValue [%s]".formatted(constant), frame);
+        }
+
+//        if (constant instanceof Constant.ConstantInteger value) {
+//            frame.push(value.into());
+//        } else if (constant instanceof Constant.ConstantStringRef ref) {
+//            frame.push(ref.into());
+//        } else {
+//            throw StackFrame.Exception.create("Cannot operate LDC with CP value that is not IntoValue [%s]".formatted(constant), frame);
+//        }
     }
 
     private static void iconst(StackFrame frame, int number) {
@@ -540,6 +546,7 @@ public class ExecutionEngine {
         Method clinit = klass.getClinit();
 
         if (clinit != null) {
+            System.out.printf("  Init    %s%n", klass.name());
 
             var staticFields = new ArrayList<>(klass.fieldGroup().fields().values());
 

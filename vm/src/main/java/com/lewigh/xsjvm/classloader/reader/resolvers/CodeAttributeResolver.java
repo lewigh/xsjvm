@@ -8,6 +8,7 @@ import lombok.NonNull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.stream.Collectors;
 
 import static com.lewigh.xsjvm.support.StreamBSupport.readAsInt;
 import static com.lewigh.xsjvm.support.StreamBSupport.readAsShort;
@@ -55,7 +56,7 @@ public class CodeAttributeResolver implements AttributeResolvingStrategy {
         return name.equals(Attributes.CODE_ATT);
     }
 
-    private static Instruction[] resolveOperations(byte[] bytes) {
+    private Instruction[] resolveOperations(byte[] bytes) {
         Instruction[] operations = new Instruction[bytes.length];
 
         int skip = 0;
@@ -66,9 +67,14 @@ public class CodeAttributeResolver implements AttributeResolvingStrategy {
                 skip--;
                 continue;
             }
-
             int unsignedInt = Byte.toUnsignedInt(bytes[i]);
-            var opCode = OpCode.byCode(unsignedInt);
+            OpCode opCode;
+            try {
+                opCode = OpCode.byCode(unsignedInt);
+            } catch (Exception e) {
+                throw new IllegalStateException(prepareIncorrectByteCodemsg(operations, unsignedInt), e);
+            }
+
             int operandsBytesLen = opCode.getOperandsType().getBytesLen();
             byte[] operandsBuffer = new byte[operandsBytesLen];
 
@@ -101,5 +107,13 @@ public class CodeAttributeResolver implements AttributeResolvingStrategy {
         }
 
         return exceptionTable;
+    }
+
+    private String prepareIncorrectByteCodemsg(Instruction[] prepared, int problemByte) {
+        String prevOperations = Arrays.stream(prepared)
+                .filter(a -> a != null)
+                .map(a -> "        " + a)
+                .collect(Collectors.joining("\n"));
+        return "%n%s%n        ---> Problem occured at next code %d".formatted(prevOperations, problemByte);
     }
 }

@@ -33,7 +33,7 @@ public sealed interface Constant {
         }
     }
 
-    record ConstantString(short index) implements Constant, IntoValue {
+    record ConstantStringRef(short index) implements Constant, IntoValue {
         @Override
         public Value into() {
             return Value.Reference.from(index);

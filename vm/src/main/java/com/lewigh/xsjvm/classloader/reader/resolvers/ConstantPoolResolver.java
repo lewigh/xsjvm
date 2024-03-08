@@ -66,7 +66,7 @@ public class ConstantPoolResolver {
                     gap = true;
                 }
                 case CONSTANT_Class -> constantPool.add(i, new Constant.Class(readAsShort(is)));
-                case CONSTANT_String -> constantPool.add(i, new Constant.ConstantString(readAsShort(is)));
+                case CONSTANT_String -> constantPool.add(i, new Constant.ConstantStringRef(readAsShort(is)));
                 case CONSTANT_Fieldref -> constantPool.add(i, new Constant.FieldInfo(readAsShort(is), readAsShort(is)));
                 case CONSTANT_Methodref -> constantPool.add(i, new Constant.MethodRefInfo(readAsShort(is), readAsShort(is)));
                 case CONSTANT_InterfaceMethodref -> constantPool.add(i, new Constant.InterfaceMethodRef(readAsShort(is), readAsShort(is)));

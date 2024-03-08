@@ -37,6 +37,9 @@ public class AppClassLoader {
     }
 
     private Klass executeLoading(String className) {
+
+        System.out.printf("  Loading %s%n", className);
+
         String path = className
                 .replace('.', '/')
                 .concat(".class");
