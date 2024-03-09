@@ -10,6 +10,7 @@ import com.lewigh.xsjvm.classloader.reader.pool.ConstantPool;
 import lombok.*;
 
 import java.util.*;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 @Data
@@ -30,7 +31,10 @@ public class StackFrame {
         return create(klass, methodMeta, locals);
     }
 
-    public void push(@NonNull Value value) {
+    public void push(Value value) {
+        if (value == null) {
+            throw Exception.create("push operation can not consume null", this);
+        }
         stack.offer(value);
     }
 
@@ -85,6 +89,8 @@ public class StackFrame {
         for (int i = locals.length - 1; i >= 0 && !stack.isEmpty(); i--) {
             locals[i] = this.pop();
         }
+
+//        int paramLen = method.descriptor().paarameterTypes().length;
 
         return create(klass, method, locals);
     }
@@ -150,6 +156,8 @@ public class StackFrame {
                 if (a != null) {
                     String string = a.toString();
                     joiner.add("%d:%s".formatted(i, string));
+                } else {
+                    joiner.add("%d:null!".formatted(i));
                 }
             }
             String locals = joiner.toString();

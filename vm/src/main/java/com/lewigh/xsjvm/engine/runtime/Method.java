@@ -2,14 +2,15 @@ package com.lewigh.xsjvm.engine.runtime;
 
 import com.lewigh.xsjvm.classloader.reader.info.attribute.ExceptionTable;
 import com.lewigh.xsjvm.classloader.reader.info.attribute.Instruction;
+import lombok.NonNull;
 
 import java.util.Arrays;
 import java.util.Objects;
 
 public record Method(
-        String name,
-        MethodDescriptor descriptor,
-        Access access,
+        @NonNull String name,
+        @NonNull MethodDescriptor descriptor,
+        @NonNull Access access,
         boolean fStatic,
         boolean fFinal,
         boolean fNative,
@@ -21,8 +22,8 @@ public record Method(
         boolean fStrict,
         short maxStack,
         short maxLocals,
-        Instruction[] instructions,
-        ExceptionTable[] exceptionTable
+        @NonNull Instruction[] instructions,
+        @NonNull ExceptionTable[] exceptionTable
 ) {
 
     @Override

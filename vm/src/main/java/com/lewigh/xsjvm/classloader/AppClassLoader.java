@@ -9,11 +9,12 @@ import com.lewigh.xsjvm.classloader.reader.info.attribute.AttributeInfo;
 import com.lewigh.xsjvm.classloader.reader.info.attribute.CodeAttribute;
 import com.lewigh.xsjvm.classloader.reader.info.attribute.ExceptionTable;
 import com.lewigh.xsjvm.classloader.reader.info.attribute.Instruction;
-import lombok.NonNull;
 
 import java.nio.file.Path;
 import java.util.*;
 
+import static com.lewigh.xsjvm.classloader.reader.resolvers.DescriptorResolver.resolveMethodDescriptor;
+import static com.lewigh.xsjvm.classloader.reader.resolvers.DescriptorResolver.resolveType;
 import static com.lewigh.xsjvm.engine.runtime.Access.*;
 import static java.util.Objects.requireNonNullElseGet;
 
@@ -114,11 +115,11 @@ public class AppClassLoader {
 
         for (var info : infoFields) {
 
-            TypeAndIdx typeAndIdx = resolveType(info.descriptor(), 0);
+            var typeAndIdx = resolveType(info.descriptor());
 
             Field field = new Field(
                     info.name(),
-                    typeAndIdx.type(),
+                    typeAndIdx,
                     computeAccess(info),
                     info.isStatic(),
                     info.isFinal(),
@@ -179,7 +180,7 @@ public class AppClassLoader {
             if (methodInfo.isNative()) {
                 Method nativeMethod = new Method(
                         mName,
-                        null,
+                        resolveMethodDescriptor(methodInfo.descriptor()),
                         computeAccess(methodInfo),
                         methodInfo.isStatic(),
                         methodInfo.isFinal(),
@@ -221,7 +222,7 @@ public class AppClassLoader {
 
             Method methodMeta = new Method(
                     mName,
-                    null,
+                    resolveMethodDescriptor(methodInfo.descriptor()),
                     access,
                     methodInfo.isStatic(),
                     methodInfo.isFinal(),
@@ -262,59 +263,4 @@ public class AppClassLoader {
 
     }
 
-    private MethodDescriptor resolveMethodDescriptor(String strDesc) {
-
-        ArrayList<Jtype> types = new ArrayList<>();
-
-        int current = 0;
-
-        while (current < strDesc.length() - 1) {
-            var typeAndGap = resolveType(strDesc, current);
-
-            types.add(typeAndGap.type());
-
-            current += typeAndGap.idx();
-
-        }
-
-        Jtype retType = types.remove(types.size() - 1);
-
-        Jtype[] parameters = new Jtype[types.size()];
-
-        for (int i = 0; i < parameters.length; i++) {
-            parameters[i] = types.get(i);
-        }
-
-        return new MethodDescriptor(
-                parameters,
-                retType
-        );
-    }
-
-    @NonNull
-    private TypeAndIdx resolveType(String strDesc, int current) {
-        char code = strDesc.charAt(current);
-
-        boolean refType = Jtype.Primitive.REFERENCE.hasCode(code);
-        boolean arrType = Jtype.Primitive.ARRAY.hasCode(code);
-
-        if (refType || arrType) {
-            for (int i = current + 1; i < strDesc.length(); i++) {
-                if (strDesc.charAt(i) == ';') {
-                    var className = strDesc.substring(current + 1, i);
-
-                    Jtype jtype = refType
-                            ? new Jtype.Reference(className)
-                            : new Jtype.Array(resolveType(className, 0).type());
-
-                    return new TypeAndIdx(jtype, i);
-                }
-            }
-        }
-        Jtype.Primitive type = Jtype.Primitive.getTypeByCode(code);
-        return new TypeAndIdx(type, current);
-    }
-
-    record TypeAndIdx(Jtype type, int idx) {
-    }
 }

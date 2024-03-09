@@ -277,7 +277,7 @@ public enum OpCode {
 
     GOTO_W(200, C_INT, "Branch always (wide index)"),
     IFNONNULL(199, C_SHORT, "Branch if reference not null"),
-    IFNULL(198, EMPTY, "Branch if reference is null"),
+    IFNULL(198, C_SHORT, "Branch if reference is null"),
     JSR_W(201, C_INT, "Jump subroutine (wide index)");
 
 

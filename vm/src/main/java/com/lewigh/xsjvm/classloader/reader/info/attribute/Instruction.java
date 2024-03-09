@@ -8,24 +8,24 @@ import java.util.Objects;
 public record Instruction(@NonNull OpCode opCode, @NonNull short[] operamds) {
 
     public short firsOperand() {
-        if (operamds.length == 0) {
-            throw new IllegalStateException();
-        }
+        checkLen();
         return operamds[0];
     }
 
     public short secondOperand() {
-        if (operamds.length == 0) {
-            throw new IllegalStateException();
-        }
+        checkLen();
         return operamds[1];
     }
 
     public short thirdOperand() {
-        if (operamds.length == 0) {
-            throw new IllegalStateException();
-        }
+        checkLen();
         return operamds[2];
+    }
+
+    private void checkLen() {
+        if (operamds.length == 0) {
+            throw new IllegalStateException("Operand block is empty for opcode %s".formatted(opCode));
+        }
     }
 
     @Override

@@ -53,7 +53,7 @@ public sealed interface Jtype {
         private final Size size;
         private final Size align;
 
-        public static Primitive getTypeByCode(@NonNull char code) {
+        public static Primitive getTypeByCode(char code) {
             for (var value : values()) {
                 if (value.code == code) {
                     return value;

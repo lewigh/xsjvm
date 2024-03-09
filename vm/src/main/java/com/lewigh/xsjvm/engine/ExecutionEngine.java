@@ -187,6 +187,10 @@ public class ExecutionEngine {
                         frame.push(poped);
                         frame.push(poped);
                     }
+                    case POP -> {
+                        frame.inc();
+                        frame.pop();
+                    }
                     case NEW -> newObject(threadStack, frame, instruction);
                     case NEWARRAY -> newArray(threadStack, frame, instruction);
                     case BIPUSH -> {
@@ -266,6 +270,8 @@ public class ExecutionEngine {
                             break loop;
                         }
                     }
+                    case IFNULL -> ifNullable(frame, instruction, true);
+                    case IFNONNULL -> ifNullable(frame, instruction, false);
                     case I_2_L -> {
                         frame.inc();
                         Value.Int v = frame.popInt();
@@ -294,16 +300,8 @@ public class ExecutionEngine {
         if (constant instanceof IntoValue i) {
             frame.push(i.into());
         } else {
-            throw StackFrame.Exception.create("Cannot operate LDC with CP value that is not IntoValue [%s]".formatted(constant), frame);
+            throw com.lewigh.xsjvm.engine.StackFrame.Exception.create("Cannot operate LDC with CP value that is not IntoValue [%s]".formatted(constant), frame);
         }
-
-//        if (constant instanceof Constant.ConstantInteger value) {
-//            frame.push(value.into());
-//        } else if (constant instanceof Constant.ConstantStringRef ref) {
-//            frame.push(ref.into());
-//        } else {
-//            throw StackFrame.Exception.create("Cannot operate LDC with CP value that is not IntoValue [%s]".formatted(constant), frame);
-//        }
     }
 
     private static void iconst(StackFrame frame, int number) {
@@ -361,6 +359,27 @@ public class ExecutionEngine {
             return true;
         }
         return false;
+    }
+
+    private boolean ifNullable(StackFrame frame, Instruction instruction, boolean mustBeNull) {
+        frame.inc();
+        var jumpIp = instruction.firsOperand();
+
+        var value = frame.pop();
+
+        if (value instanceof Value.Reference ref) {
+            if (mustBeNull == ref.isNull()) {
+                frame.goTo(jumpIp);
+                return true;
+            } else {
+                return false;
+            }
+        }
+        throw new IllegalStateException("Value %s is not a reference".formatted(value));
+    }
+
+    enum NullDir {
+
     }
 
     private void putStatic(StackFrame frame, Instruction instruction, ThreadStack threadStack) {
@@ -446,18 +465,18 @@ public class ExecutionEngine {
     }
 
     public void invoke(InvokeType invokeType, ThreadStack threadStack, StackFrame frame, Instruction instruction) {
-        ConstantPool cp = frame.getPool();
+        var cp = frame.getPool();
 
         var methodIdx = instruction.firsOperand();
 
-        Constant.MethodRefInfo methodRefInfo = cp.resolveMethorRefInfo(methodIdx);
+        var methodRefInfo = cp.resolveMethorRefInfo(methodIdx);
 
-        String className = cp.resolveClassRef(methodRefInfo.classIndex());
+        var className = cp.resolveClassRef(methodRefInfo.classIndex());
 
-        Constant.NameAndTypeInfo nameAndTypeInfo = cp.resolveNameAndTypeInfo(methodRefInfo.nameAndTypeIndex());
+        var nameAndTypeInfo = cp.resolveNameAndTypeInfo(methodRefInfo.nameAndTypeIndex());
 
-        String methodName = cp.resolveUtf8Ref(nameAndTypeInfo.nameIndex());
-        String methodDescriptor = cp.resolveUtf8Ref(nameAndTypeInfo.descriptorIndex());
+        var methodName = cp.resolveUtf8Ref(nameAndTypeInfo.nameIndex());
+        var methodDescriptor = cp.resolveUtf8Ref(nameAndTypeInfo.descriptorIndex());
 
         // PROCESSING REFERENCES OF CLASS RECEIVING OBJECTS AND COMPARING THE CLASS WITH A VALID ONE
 
@@ -466,6 +485,7 @@ public class ExecutionEngine {
 
         if (method.fNative()) {
             System.out.printf("Call native method %s%n", method.name());
+            frame.inc();
 
         } else {
             StackFrame stackFrame = frame.fork(targetClass, method);
