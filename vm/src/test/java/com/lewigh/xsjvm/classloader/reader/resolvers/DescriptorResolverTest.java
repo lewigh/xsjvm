@@ -77,6 +77,18 @@ class DescriptorResolverTest {
         resolveMethodDescriptorChack("(Ljava/lang/Object;I)V", Jtype.Primitive.VOID, new Jtype.Reference("java/lang/Object"), Jtype.Primitive.INT);
     }
 
+    @Test
+    void resolveMethodDescriptor_PrintStreamOrWriter_StackTraceElement_String_String_Set_V() {
+        resolveMethodDescriptorChack("(Ljava/lang/Throwable$PrintStreamOrWriter;[Ljava/lang/StackTraceElement;Ljava/lang/String;Ljava/lang/String;Ljava/util/Set;)V",
+                Jtype.Primitive.VOID,
+                new Jtype.Reference("java/lang/Throwable$PrintStreamOrWriter"),
+                new Jtype.Array(new Jtype.Reference("java/lang/StackTraceElement")),
+                new Jtype.Reference("java/lang/String"),
+                new Jtype.Reference("java/lang/String"),
+                new Jtype.Reference("java/util/Set")
+        );
+    }
+
     private void resolveMethodDescriptorChack(String input, Jtype retType, Jtype... params) {
         assertEquals(
                 new MethodDescriptor(params, retType),

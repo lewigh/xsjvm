@@ -1,6 +1,7 @@
 package com.lewigh.xsjvm.engine;
 
 import com.lewigh.xsjvm.VmException;
+import com.lewigh.xsjvm.engine.runtime.Jtype;
 import com.lewigh.xsjvm.engine.runtime.Klass;
 import com.lewigh.xsjvm.engine.runtime.Method;
 import com.lewigh.xsjvm.engine.runtime.Value;
@@ -12,6 +13,8 @@ import lombok.*;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.joining;
 
 @Data
 @RequiredArgsConstructor
@@ -85,12 +88,27 @@ public class StackFrame {
 
     public StackFrame fork(@NonNull Klass klass, @NonNull Method method) {
         Value[] locals = new Value[method.maxLocals()];
+        Jtype[] methodParamTypes = method.descriptor().paarameterTypes();
+
+        int passed = 0;
 
         for (int i = locals.length - 1; i >= 0 && !stack.isEmpty(); i--) {
             locals[i] = this.pop();
+            passed++;
         }
 
-//        int paramLen = method.descriptor().paarameterTypes().length;
+        if (passed < methodParamTypes.length) {
+            throw StackFrame.Exception.create(
+                    "Error while preraring method call arguments for method %s%s%nExpected %d arguments%n%s%nbut passed %d%n%s%n%n".formatted(
+                            klass.name(),
+                            method.name(),
+                            methodParamTypes.length,
+                            Arrays.stream(methodParamTypes).map(a -> " " + a.toString()).collect(joining("\n")),
+                            passed,
+                            Arrays.stream(locals).limit(passed).map(a -> " " + a.toString()).collect(joining("\n"))
+                    ),
+                    this);
+        }
 
         return create(klass, method, locals);
     }
@@ -147,7 +165,7 @@ public class StackFrame {
 
             String stackParams = frame.stack.stream()
                     .map(a -> a.toString())
-                    .collect(Collectors.joining(", ", "", "  "));
+                    .collect(joining(", ", "", "  "));
 
             StringJoiner joiner = new StringJoiner(", ", "", "  ");
             Value[] table = frame.localTable;

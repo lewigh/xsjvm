@@ -9,57 +9,55 @@ import java.util.ArrayList;
 public class DescriptorResolver {
 
     public static final int PREFIX_GAP = 1;
+    public static final int SEMICOLUMN_GAP = 1;
 
-    public static MethodDescriptor resolveMethodDescriptor(String strDesc) {
+    @NonNull
+    public static MethodDescriptor resolveMethodDescriptor(@NonNull String descriptor) {
         try {
 
-            int lastParamIdx = strDesc.lastIndexOf(')') + 1;
-            var paramsPart = strDesc.substring(1, lastParamIdx - 1);
-            var retPart = strDesc.substring(lastParamIdx);
-
+            int lastParamIdx = descriptor.lastIndexOf(')') + 1;
+            var paramsPart = descriptor.substring(1, lastParamIdx - 1);
+            var retPart = descriptor.substring(lastParamIdx);
 
             var types = new ArrayList<Jtype>();
 
             int current = 0;
 
             while (current < paramsPart.length()) {
-                var typeAndGap = resolveTypeAndSize(paramsPart, current);
+                var typeAndSize = resolveTypeAndSize(paramsPart, current);
 
-                types.add(typeAndGap.type());
+                types.add(typeAndSize.type());
 
-                current += typeAndGap.size();
+                current += typeAndSize.size();
             }
 
             Jtype retType = resolveType(retPart);
+            Jtype[] paramTypes = new Jtype[types.size()];
 
-            Jtype[] parameters = new Jtype[types.size()];
-
-            for (int i = 0; i < parameters.length; i++) {
-                parameters[i] = types.get(i);
+            for (int i = 0; i < paramTypes.length; i++) {
+                paramTypes[i] = types.get(i);
             }
 
-            return new MethodDescriptor(parameters, retType);
+            return new MethodDescriptor(paramTypes, retType);
 
         } catch (Exception e) {
-            throw new IllegalStateException("Error has occured while parsing type %s".formatted(strDesc), e);
+            throw new IllegalStateException("Error has occured while parsing type %s".formatted(descriptor), e);
         }
     }
 
     @NonNull
-    public static Jtype resolveType(String strDesc) {
-        return resolveTypeAndSize(strDesc, 0).type();
+    public static Jtype resolveType(@NonNull String descriptor) {
+        return resolveTypeAndSize(descriptor, 0).type();
     }
 
-    private static TypeAndSize resolveTypeAndSize(String strDesc, int current) {
-        char code = strDesc.charAt(current);
+    private static TypeAndSize resolveTypeAndSize(String descriptor, int current) {
+        var type = Jtype.Primitive.getTypeByCode(descriptor.charAt(current));
 
-        if (Jtype.Primitive.REFERENCE.hasCode(code)) {
-            return resolverRefType(strDesc, current);
-        } else if (Jtype.Primitive.ARRAY.hasCode(code)) {
-            return resolveArray(strDesc, current);
-        } else {
-            return new TypeAndSize(Jtype.Primitive.getTypeByCode(code), 1);
-        }
+        return switch (type) {
+            case REFERENCE -> resolverRefType(descriptor, current);
+            case ARRAY -> resolveArrayType(descriptor, current);
+            default -> resolvePremitiveType(type);
+        };
     }
 
     private static TypeAndSize resolverRefType(String strDesc, int current) {
@@ -67,14 +65,14 @@ public class DescriptorResolver {
             if (strDesc.charAt(i) == ';') {
                 var className = strDesc.substring(current + PREFIX_GAP, i);
 
-                return new TypeAndSize(new Jtype.Reference(className), i + 1);
+                return new TypeAndSize(new Jtype.Reference(className), i + SEMICOLUMN_GAP);
             }
         }
         throw new IllegalStateException("Can not able to parse type. Internal error with ref/arr type %s".formatted(strDesc));
     }
 
-    private static TypeAndSize resolveArray(String strDesc, int current) {
-        TypeAndSize typeAndSize = resolveTypeAndSize(strDesc, current + 1);
+    private static TypeAndSize resolveArrayType(String strDesc, int current) {
+        TypeAndSize typeAndSize = resolveTypeAndSize(strDesc, current + PREFIX_GAP);
 
         Jtype subtype = typeAndSize.type();
 
@@ -83,6 +81,10 @@ public class DescriptorResolver {
         }
 
         return new TypeAndSize(new Jtype.Array(subtype), typeAndSize.size + 1);
+    }
+
+    private static TypeAndSize resolvePremitiveType(Jtype.Primitive type) {
+        return new TypeAndSize(type, 1);
     }
 
     public record TypeAndSize(Jtype type, int size) {

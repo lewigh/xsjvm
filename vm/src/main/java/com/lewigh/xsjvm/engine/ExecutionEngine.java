@@ -66,6 +66,10 @@ public class ExecutionEngine {
                 var opCode = instruction.opCode();
 
                 switch (opCode) {
+                    case ACONST_NULL -> {
+                        frame.inc();
+                        frame.push(new Value.Reference.Null());
+                    }
                     case ICONST_0 -> {
                         frame.inc();
                         iconst(frame, 0);
