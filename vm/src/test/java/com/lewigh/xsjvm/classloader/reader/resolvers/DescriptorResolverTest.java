@@ -78,6 +78,22 @@ class DescriptorResolverTest {
     }
 
     @Test
+    void resolveMethodDescriptor_PrintStreamOrWriter_V() {
+        resolveMethodDescriptorChack("(Ljava/lang/Throwable$PrintStreamOrWriter;)V",
+                Jtype.Primitive.VOID,
+                new Jtype.Reference("java/lang/Throwable$PrintStreamOrWriter")
+        );
+    }
+
+    @Test
+    void resolveMethodDescriptor_StackTraceElement_V() {
+        resolveMethodDescriptorChack("([Ljava/lang/StackTraceElement;)V",
+                Jtype.Primitive.VOID,
+                new Jtype.Array(new Jtype.Reference("java/lang/StackTraceElement"))
+        );
+    }
+
+    @Test
     void resolveMethodDescriptor_PrintStreamOrWriter_StackTraceElement_String_String_Set_V() {
         resolveMethodDescriptorChack("(Ljava/lang/Throwable$PrintStreamOrWriter;[Ljava/lang/StackTraceElement;Ljava/lang/String;Ljava/lang/String;Ljava/util/Set;)V",
                 Jtype.Primitive.VOID,

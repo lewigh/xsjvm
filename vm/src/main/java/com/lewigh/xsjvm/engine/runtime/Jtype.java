@@ -23,6 +23,7 @@ public sealed interface Jtype {
     }
 
     record Array(@NonNull Jtype jtype) implements Jtype {
+
         @Override
         public Primitive primitive() {
             return Primitive.ARRAY;
