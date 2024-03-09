@@ -11,36 +11,33 @@ public class DescriptorResolver {
     public static final int PREFIX_GAP = 1;
     public static final int SEMICOLUMN_GAP = 1;
 
+    public record TypeAndGap(Jtype type, int gap) {
+    }
+
     @NonNull
     public static MethodDescriptor resolveMethodDescriptor(@NonNull String descriptor) {
         try {
 
-            int lastParamIdx = descriptor.lastIndexOf(')') + 1;
-            var paramsPart = descriptor.substring(1, lastParamIdx - 1);
-            var retPart = descriptor.substring(lastParamIdx);
+            var buff = new ArrayList<Jtype>();
 
-            var types = new ArrayList<Jtype>();
+            int current = 1;
 
-            int current = 0;
+            while (descriptor.charAt(current) != ')') {
+                var typeAndGap = resolveTypeAndGap(descriptor, current);
 
-            while (current < paramsPart.length()) {
-                var typeAndGap = resolveTypeAndSize(paramsPart, current);
-
-                types.add(typeAndGap.type());
+                buff.add(typeAndGap.type());
 
                 current += typeAndGap.gap();
 
                 current++;
             }
 
-            Jtype retType = resolveType(retPart);
-            Jtype[] paramTypes = new Jtype[types.size()];
+            current++;
 
-            for (int i = 0; i < paramTypes.length; i++) {
-                paramTypes[i] = types.get(i);
-            }
+            Jtype returnType = resolveTypeAndGap(descriptor, current).type();
+            Jtype[] paramTypes = buff.toArray(new Jtype[0]);
 
-            return new MethodDescriptor(paramTypes, retType);
+            return new MethodDescriptor(paramTypes, returnType);
 
         } catch (Exception e) {
             throw new IllegalStateException("Error has occured while parsing type %s".formatted(descriptor), e);
@@ -49,23 +46,23 @@ public class DescriptorResolver {
 
     @NonNull
     public static Jtype resolveType(@NonNull String descriptor) {
-        return resolveTypeAndSize(descriptor, 0).type();
+        return resolveTypeAndGap(descriptor, 0).type();
     }
 
-    private static TypeAndGap resolveTypeAndSize(String descriptor, int current) {
-        var type = Jtype.Primitive.getTypeByCode(descriptor.charAt(current));
+    private static TypeAndGap resolveTypeAndGap(String descriptor, int from) {
+        var type = Jtype.Primitive.getTypeByCode(descriptor.charAt(from));
 
         return switch (type) {
-            case REFERENCE -> resolverRefType(descriptor, current);
-            case ARRAY -> resolveArrayType(descriptor, current);
+            case REFERENCE -> resolverRefType(descriptor, from);
+            case ARRAY -> resolveArrayType(descriptor, from);
             default -> resolvePremitiveType(type);
         };
     }
 
-    private static TypeAndGap resolverRefType(String strDesc, int current) {
-        for (int i = current + PREFIX_GAP, j = PREFIX_GAP; i < strDesc.length(); i++, j++) {
+    private static TypeAndGap resolverRefType(String strDesc, int from) {
+        for (int i = from + PREFIX_GAP, j = PREFIX_GAP; i < strDesc.length(); i++, j++) {
             if (strDesc.charAt(i) == ';') {
-                var className = strDesc.substring(current + PREFIX_GAP, i);
+                var className = strDesc.substring(from + PREFIX_GAP, i);
 
                 return new TypeAndGap(new Jtype.Reference(className), j);
             }
@@ -73,8 +70,8 @@ public class DescriptorResolver {
         throw new IllegalStateException("Can not able to parse type. Internal error with ref/arr type %s".formatted(strDesc));
     }
 
-    private static TypeAndGap resolveArrayType(String strDesc, int current) {
-        TypeAndGap typeAndGap = resolveTypeAndSize(strDesc, current + PREFIX_GAP);
+    private static TypeAndGap resolveArrayType(String strDesc, int from) {
+        TypeAndGap typeAndGap = resolveTypeAndGap(strDesc, from + PREFIX_GAP);
 
         Jtype subtype = typeAndGap.type();
 
@@ -89,6 +86,4 @@ public class DescriptorResolver {
         return new TypeAndGap(type, 0);
     }
 
-    public record TypeAndGap(Jtype type, int gap) {
-    }
 }
