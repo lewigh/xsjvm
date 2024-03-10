@@ -2,7 +2,7 @@ package com.lewigh.xsjvm;
 
 import com.lewigh.xsjvm.classloader.AppClassLoader;
 import com.lewigh.xsjvm.classloader.ClassStorage;
-import com.lewigh.xsjvm.gc.UnsafeMemoryManager;
+import com.lewigh.xsjvm.gc.*;
 import com.lewigh.xsjvm.engine.ExecutionEngine;
 import com.lewigh.xsjvm.classloader.reader.ClassReader;
 import lombok.NonNull;
@@ -25,7 +25,7 @@ public class Main {
 
     private static void start(Path rtClassesPath, Path appClassesPath, String mainClass) {
         try {
-            UnsafeMemoryManager allocator = UnsafeMemoryManager.create();
+            MemoryManager memManager = new UnsafeMemoryManager(ByteBufferMemoryAllocator.create(1024 * 1000));
             ClassReader reader = new ClassReader();
             ClassStorage classStorage = new ClassStorage();
 
@@ -35,7 +35,7 @@ public class Main {
                 var classPath = Stream.concat(systemPathStream, appPathStream).toList();
 
                 var classLoader = new AppClassLoader(classPath, reader, classStorage);
-                var engine = new ExecutionEngine(classLoader, allocator);
+                var engine = new ExecutionEngine(classLoader, memManager);
 
                 engine.execute(mainClass);
             }

@@ -35,7 +35,7 @@ public class DescriptorResolver {
             current++;
 
             Jtype returnType = resolveTypeAndGap(descriptor, current).type();
-            Jtype[] paramTypes = buff.toArray(new Jtype[0]);
+            Jtype[] paramTypes = buff.toArray(Jtype[]::new);
 
             return new MethodDescriptor(paramTypes, returnType);
 

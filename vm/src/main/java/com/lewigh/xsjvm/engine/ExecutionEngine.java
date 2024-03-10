@@ -3,15 +3,16 @@ package com.lewigh.xsjvm.engine;
 
 import com.lewigh.xsjvm.classloader.AppClassLoader;
 import com.lewigh.xsjvm.classloader.reader.info.attribute.ExceptionTable;
-import com.lewigh.xsjvm.gc.UnsafeMemoryManager;
-import com.lewigh.xsjvm.engine.runtime.*;
 import com.lewigh.xsjvm.classloader.reader.info.attribute.Instruction;
 import com.lewigh.xsjvm.classloader.reader.pool.Constant;
 import com.lewigh.xsjvm.classloader.reader.pool.ConstantPool;
+import com.lewigh.xsjvm.engine.runtime.*;
+import com.lewigh.xsjvm.gc.MemoryManager;
 import com.lewigh.xsjvm.support.Logger;
 import lombok.NonNull;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
 
 import static com.lewigh.xsjvm.SymbolTable.ENTRY_POINT_METHOD_DESC;
 import static com.lewigh.xsjvm.SymbolTable.ENTRY_POINT_METHOD_NAME;
@@ -20,9 +21,9 @@ import static com.lewigh.xsjvm.SymbolTable.ENTRY_POINT_METHOD_NAME;
 public class ExecutionEngine {
 
     private final AppClassLoader classLoader;
-    private final UnsafeMemoryManager memoryManager;
+    private final MemoryManager memoryManager;
 
-    public ExecutionEngine(AppClassLoader appClassLoader, UnsafeMemoryManager allocator) {
+    public ExecutionEngine(AppClassLoader appClassLoader, MemoryManager allocator) {
         this.classLoader = appClassLoader;
         this.memoryManager = allocator;
     }

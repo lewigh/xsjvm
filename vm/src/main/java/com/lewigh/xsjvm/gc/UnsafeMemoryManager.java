@@ -4,46 +4,32 @@ import com.lewigh.xsjvm.MemoryManagmentException;
 import com.lewigh.xsjvm.engine.runtime.Field;
 import com.lewigh.xsjvm.engine.runtime.Jtype;
 import com.lewigh.xsjvm.engine.runtime.Value;
-import sun.misc.Unsafe;
 
 import java.util.Collection;
 
-public class UnsafeMemoryManager {
+public class UnsafeMemoryManager implements MemoryManager {
 
     private static final int MARK_WORD_HEADER_SIZE = 4;
     private static final int CLASS_WORD_HEADER_SIZE = 4;
     private static final int ARRAY_HEADER_SIZE = 4;
     private static final int OBJECT_HEADERS_SIZE = MARK_WORD_HEADER_SIZE + CLASS_WORD_HEADER_SIZE;
 
-    private final Unsafe unsafe;
+    private final MemoryAllocator allocator;
 
-    private UnsafeMemoryManager(Unsafe unsafe) {
-        this.unsafe = unsafe;
+    public UnsafeMemoryManager(MemoryAllocator allocator) {
+        this.allocator = allocator;
     }
 
-    public static UnsafeMemoryManager create() throws MemoryManagmentException {
-        try {
-            java.lang.reflect.Field f = Unsafe.class.getDeclaredField("theUnsafe");
-            f.setAccessible(true);
-            Unsafe unsafe = (Unsafe) f.get(null);
-
-            return new UnsafeMemoryManager(unsafe);
-
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new MemoryManagmentException("Error while creating UB", e);
-        }
-    }
-
-
+    @Override
     public long allocateObject(int classId, Collection<Field> fields, long payloadSize) throws MemoryManagmentException {
         try {
-            long objectAddress = unsafe.allocateMemory(computeTotalObjectSize(payloadSize));
+            long objectAddress = allocator.allocateMemory(computeTotalObjectSize(payloadSize));
 
             long cursor = objectAddress;
 
             cursor += MARK_WORD_HEADER_SIZE;
 
-            unsafe.putInt(cursor, classId);
+            allocator.putInt(cursor, classId);
 
             cursor += CLASS_WORD_HEADER_SIZE;
 
@@ -61,7 +47,7 @@ public class UnsafeMemoryManager {
 
     }
 
-
+    @Override
     public long allocateArray(Jtype.Primitive type, int size) throws MemoryManagmentException {
         try {
 
@@ -69,17 +55,17 @@ public class UnsafeMemoryManager {
 
             int totalSize = OBJECT_HEADERS_SIZE + payloadSize;
 
-            long objectAddress = unsafe.allocateMemory(totalSize);
+            long objectAddress = allocator.allocateMemory(totalSize);
 
             long cursor = objectAddress;
 
             cursor += MARK_WORD_HEADER_SIZE;
 
-            unsafe.putInt(cursor, 0);
+            allocator.putInt(cursor, 0);
 
             cursor += CLASS_WORD_HEADER_SIZE;
 
-            unsafe.putInt(cursor, size);
+            allocator.putInt(cursor, size);
 
             cursor += ARRAY_HEADER_SIZE;
 
@@ -94,6 +80,7 @@ public class UnsafeMemoryManager {
         }
     }
 
+    @Override
     public void setArrayElement(long address, int index, Jtype.Primitive type, Number value) throws MemoryManagmentException {
         try {
             var cursor = address + OBJECT_HEADERS_SIZE + ARRAY_HEADER_SIZE;
@@ -108,11 +95,11 @@ public class UnsafeMemoryManager {
         }
     }
 
+    @Override
     public Value getArrayElement(long address, int index, Jtype.Primitive type) throws MemoryManagmentException {
 
         try {
-            var offset = OBJECT_HEADERS_SIZE + ARRAY_HEADER_SIZE;
-            var cursor = address + offset;
+            var cursor = address + OBJECT_HEADERS_SIZE;
 
             var off = type.getAlign().getTotal() * index;
 
@@ -130,28 +117,29 @@ public class UnsafeMemoryManager {
         return getWithType(cur, Jtype.Primitive.INT).asInt();
     }
 
-
+    @Override
     public void putWithType(long address, Jtype.Primitive type, Number value) throws MemoryManagmentException {
         try {
             switch (type) {
                 case VOID -> {
                 }
                 case BYTE, BOOL -> {
-                    unsafe.putByte(address, (byte) value);
+                    allocator.putByte(address, (byte) value);
                 }
-                case SHORT -> unsafe.putShort(address, (short) value);
-                case CHAR -> unsafe.putChar(address, (char) ((int) value));
-                case INT -> unsafe.putInt(address, value.intValue());
-                case LONG -> unsafe.putLong(address, (long) value);
-                case FLOAT -> unsafe.putFloat(address, (float) value);
-                case DOUBLE -> unsafe.putDouble(address, (double) value);
-                case REFERENCE, ARRAY -> unsafe.putAddress(address, (long) value);
+                case SHORT -> allocator.putShort(address, (short) value);
+                case CHAR -> allocator.putChar(address, (char) ((int) value));
+                case INT -> allocator.putInt(address, value.intValue());
+                case LONG -> allocator.putLong(address, (long) value);
+                case FLOAT -> allocator.putFloat(address, (float) value);
+                case DOUBLE -> allocator.putDouble(address, (double) value);
+                case REFERENCE, ARRAY -> allocator.putAddress(address, (long) value);
             }
         } catch (Throwable e) {
             throw new MemoryManagmentException("Unable to put value into memory", e);
         }
     }
 
+    @Override
     public void initWithType(long address, Jtype.Primitive type) throws MemoryManagmentException {
         try {
 
@@ -159,44 +147,46 @@ public class UnsafeMemoryManager {
             switch (type) {
                 case VOID -> {
                 }
-                case BYTE, BOOL -> unsafe.putByte(address, (byte) 0);
-                case SHORT -> unsafe.putShort(address, (short) 0);
-                case CHAR -> unsafe.putChar(address, (char) 0);
-                case INT -> unsafe.putInt(address, 0);
-                case LONG -> unsafe.putLong(address, 0L);
-                case FLOAT -> unsafe.putFloat(address, 0.0f);
-                case DOUBLE -> unsafe.putDouble(address, 0d);
-                case REFERENCE, ARRAY -> unsafe.putAddress(address, 0L);
+                case BYTE, BOOL -> allocator.putByte(address, (byte) 0);
+                case SHORT -> allocator.putShort(address, (short) 0);
+                case CHAR -> allocator.putChar(address, (char) 0);
+                case INT -> allocator.putInt(address, 0);
+                case LONG -> allocator.putLong(address, 0L);
+                case FLOAT -> allocator.putFloat(address, 0.0f);
+                case DOUBLE -> allocator.putDouble(address, 0d);
+                case REFERENCE, ARRAY -> allocator.putAddress(address, 0L);
             }
         } catch (Throwable e) {
             throw new MemoryManagmentException(e);
         }
     }
 
+    @Override
     public Value getWithType(long address, Jtype.Primitive type) throws MemoryManagmentException {
         try {
             return switch (type) {
                 case VOID -> {
                     throw new RuntimeException();
                 }
-                case BYTE -> new Value.Byte(unsafe.getByte(address));
-                case BOOL -> new Value.Bool(unsafe.getByte(address) != 0);
-                case SHORT -> new Value.Short(unsafe.getShort(address));
-                case CHAR -> new Value.Char(unsafe.getChar(address));
-                case INT -> new Value.Int(unsafe.getInt(address));
-                case LONG -> new Value.Long(unsafe.getLong(address));
-                case FLOAT -> new Value.Float(unsafe.getFloat(address));
-                case DOUBLE -> new Value.Double(unsafe.getDouble(address));
-                case REFERENCE, ARRAY -> Value.Reference.from(unsafe.getAddress(address));
+                case BYTE -> new Value.Byte(allocator.getByte(address));
+                case BOOL -> new Value.Bool(allocator.getByte(address) != 0);
+                case SHORT -> new Value.Short(allocator.getShort(address));
+                case CHAR -> new Value.Char(allocator.getChar(address));
+                case INT -> new Value.Int(allocator.getInt(address));
+                case LONG -> new Value.Long(allocator.getLong(address));
+                case FLOAT -> new Value.Float(allocator.getFloat(address));
+                case DOUBLE -> new Value.Double(allocator.getDouble(address));
+                case REFERENCE, ARRAY -> Value.Reference.from(allocator.getAddress(address));
             };
         } catch (Throwable e) {
             throw new MemoryManagmentException("Unable to get value from memory", e);
         }
     }
 
+    @Override
     public int getClassId(long objectAddress) throws MemoryManagmentException {
         try {
-            return unsafe.getInt(objectAddress + MARK_WORD_HEADER_SIZE);
+            return allocator.getInt(objectAddress + MARK_WORD_HEADER_SIZE);
         } catch (Throwable e) {
             throw new MemoryManagmentException(e);
         }
