@@ -1,4 +1,4 @@
-package com.lewigh.xsjvm.gc;
+package com.lewigh.xsjvm.mem;
 
 import com.lewigh.xsjvm.MemoryManagmentException;
 import com.lewigh.xsjvm.engine.runtime.Field;
@@ -7,7 +7,7 @@ import com.lewigh.xsjvm.engine.runtime.Value;
 
 import java.util.Collection;
 
-public interface MemoryManager {
+public interface VmMemoryManager {
 
     long allocateObject(int classId, Collection<Field> fields, long payloadSize) throws MemoryManagmentException;
 

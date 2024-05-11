@@ -1,4 +1,4 @@
-package com.lewigh.xsjvm.gc;
+package com.lewigh.xsjvm.mem;
 
 import com.lewigh.xsjvm.MemoryManagmentException;
 import com.lewigh.xsjvm.engine.runtime.Field;
@@ -7,7 +7,7 @@ import com.lewigh.xsjvm.engine.runtime.Value;
 
 import java.util.Collection;
 
-public class UnsafeMemoryManager implements MemoryManager {
+public class StandartVmMemoryManager implements VmMemoryManager {
 
     private static final int MARK_WORD_HEADER_SIZE = 4;
     private static final int CLASS_WORD_HEADER_SIZE = 4;
@@ -16,14 +16,14 @@ public class UnsafeMemoryManager implements MemoryManager {
 
     private final MemoryAllocator allocator;
 
-    public UnsafeMemoryManager(MemoryAllocator allocator) {
+    public StandartVmMemoryManager(MemoryAllocator allocator) {
         this.allocator = allocator;
     }
 
     @Override
     public long allocateObject(int classId, Collection<Field> fields, long payloadSize) throws MemoryManagmentException {
         try {
-            long objectAddress = allocator.allocateMemory(computeTotalObjectSize(payloadSize));
+            long objectAddress = allocator.allocate(computeTotalObjectSize(payloadSize));
 
             long cursor = objectAddress;
 
@@ -55,7 +55,7 @@ public class UnsafeMemoryManager implements MemoryManager {
 
             int totalSize = OBJECT_HEADERS_SIZE + payloadSize;
 
-            long objectAddress = allocator.allocateMemory(totalSize);
+            long objectAddress = allocator.allocate(totalSize);
 
             long cursor = objectAddress;
 

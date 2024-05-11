@@ -24,7 +24,7 @@ public class Sample {
 
         float v = tryCatch();
 
-        throwE();
+//        throwE();
     }
 
     public static int add(int a, int b) {

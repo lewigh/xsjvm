@@ -1,4 +1,4 @@
-package com.lewigh.xsjvm.gc;
+package com.lewigh.xsjvm.mem;
 
 import com.lewigh.xsjvm.MemoryManagmentException;
 import sun.misc.Unsafe;
@@ -105,7 +105,7 @@ public class UnsafeMemoryAllocator implements MemoryAllocator {
     }
 
     @Override
-    public long allocateMemory(long bytes) {
+    public long allocate(long bytes) {
         return unsafe.allocateMemory(bytes);
     }
 }

@@ -1,4 +1,4 @@
-package com.lewigh.xsjvm.gc;
+package com.lewigh.xsjvm.mem;
 
 
 public interface MemoryAllocator {
@@ -35,5 +35,5 @@ public interface MemoryAllocator {
 
     void putAddress(long address, long x);
 
-    long allocateMemory(long bytes);
+    long allocate(long bytes);
 }

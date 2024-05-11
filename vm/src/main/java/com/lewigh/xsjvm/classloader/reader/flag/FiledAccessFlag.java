@@ -25,5 +25,4 @@ public enum FiledAccessFlag {
                 .filter(f -> (mask & f.hex) == f.hex)
                 .toArray(FiledAccessFlag[]::new);
     }
-
 }

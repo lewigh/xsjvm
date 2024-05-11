@@ -7,7 +7,7 @@ import com.lewigh.xsjvm.classloader.reader.info.attribute.Instruction;
 import com.lewigh.xsjvm.classloader.reader.pool.Constant;
 import com.lewigh.xsjvm.classloader.reader.pool.ConstantPool;
 import com.lewigh.xsjvm.engine.runtime.*;
-import com.lewigh.xsjvm.gc.MemoryManager;
+import com.lewigh.xsjvm.mem.VmMemoryManager;
 import com.lewigh.xsjvm.support.Logger;
 import lombok.NonNull;
 
@@ -21,9 +21,9 @@ import static com.lewigh.xsjvm.SymbolTable.ENTRY_POINT_METHOD_NAME;
 public class ExecutionEngine {
 
     private final AppClassLoader classLoader;
-    private final MemoryManager memoryManager;
+    private final VmMemoryManager memoryManager;
 
-    public ExecutionEngine(AppClassLoader appClassLoader, MemoryManager allocator) {
+    public ExecutionEngine(AppClassLoader appClassLoader, VmMemoryManager allocator) {
         this.classLoader = appClassLoader;
         this.memoryManager = allocator;
     }

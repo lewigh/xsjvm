@@ -2,7 +2,7 @@ package com.lewigh.xsjvm;
 
 import com.lewigh.xsjvm.classloader.AppClassLoader;
 import com.lewigh.xsjvm.classloader.ClassStorage;
-import com.lewigh.xsjvm.gc.*;
+import com.lewigh.xsjvm.mem.*;
 import com.lewigh.xsjvm.engine.ExecutionEngine;
 import com.lewigh.xsjvm.classloader.reader.ClassReader;
 import lombok.NonNull;
@@ -13,6 +13,8 @@ import java.nio.file.Path;
 import java.util.stream.Stream;
 
 public class Main {
+
+    public static final boolean OLD_ALLOCATOR = true;
 
     public static void main(String[] args) {
 
@@ -25,7 +27,11 @@ public class Main {
 
     private static void start(Path rtClassesPath, Path appClassesPath, String mainClass) {
         try {
-            MemoryManager memManager = new UnsafeMemoryManager(ByteBufferMemoryAllocator.create(1024 * 1000));
+
+            UnsafeMemoryAllocator oldAllocator = UnsafeMemoryAllocator.create();
+            ByteBufferMemoryAllocator newAllocator = ByteBufferMemoryAllocator.create(1024 * 1000);
+
+            VmMemoryManager memManager = new StandartVmMemoryManager(OLD_ALLOCATOR ? oldAllocator : newAllocator);
             ClassReader reader = new ClassReader();
             ClassStorage classStorage = new ClassStorage();
 

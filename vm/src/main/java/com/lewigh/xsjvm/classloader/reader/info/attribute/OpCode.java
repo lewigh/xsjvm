@@ -278,7 +278,10 @@ public enum OpCode {
     GOTO_W(200, C_INT, "Branch always (wide index)"),
     IFNONNULL(199, C_SHORT, "Branch if reference not null"),
     IFNULL(198, C_SHORT, "Branch if reference is null"),
-    JSR_W(201, C_INT, "Jump subroutine (wide index)");
+    JSR_W(201, C_INT, "Jump subroutine (wide index)"),
+    RESERVED_DEBUG(202, EMPTY, "Provide internal debug"),
+    RESERVED_IMPDEP_1(254, EMPTY, "provide \"back doors\""),
+    RESERVED_IMPDEP_2(255, EMPTY, "provide \"back doors\"");
 
 
     private final int code;
