@@ -1,7 +1,7 @@
 package com.lewigh.xsjvm.mem;
 
 import com.lewigh.xsjvm.MemoryManagmentException;
-import com.lewigh.xsjvm.engine.runtime.Field;
+import com.lewigh.xsjvm.engine.runtime.FieldDesc;
 import com.lewigh.xsjvm.engine.runtime.Jtype;
 import com.lewigh.xsjvm.engine.runtime.Value;
 
@@ -21,7 +21,7 @@ public class StandartVmMemoryManager implements VmMemoryManager {
     }
 
     @Override
-    public long allocateObject(int classId, Collection<Field> fields, long payloadSize) throws MemoryManagmentException {
+    public long allocateObject(int classId, Collection<FieldDesc> fields, long payloadSize) throws MemoryManagmentException {
         try {
             long objectAddress = allocator.allocate(computeTotalObjectSize(payloadSize));
 
@@ -176,7 +176,7 @@ public class StandartVmMemoryManager implements VmMemoryManager {
                 case LONG -> new Value.Long(allocator.getLong(address));
                 case FLOAT -> new Value.Float(allocator.getFloat(address));
                 case DOUBLE -> new Value.Double(allocator.getDouble(address));
-                case REFERENCE, ARRAY -> Value.Reference.from(allocator.getAddress(address));
+                case REFERENCE, ARRAY -> Value.Ref.from(allocator.getAddress(address));
             };
         } catch (Throwable e) {
             throw new MemoryManagmentException("Unable to get value from memory", e);

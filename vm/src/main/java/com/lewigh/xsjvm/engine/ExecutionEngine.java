@@ -69,7 +69,7 @@ public class ExecutionEngine {
                 switch (opCode) {
                     case ACONST_NULL -> {
                         frame.inc();
-                        frame.push(new Value.Reference.Null());
+                        frame.push(new Value.Ref.Null());
                     }
                     case ICONST_0 -> {
                         frame.inc();
@@ -197,7 +197,7 @@ public class ExecutionEngine {
                         frame.pop();
                     }
                     case NEW -> newObject(threadStack, frame, instruction);
-                    case NEWARRAY -> newArray(threadStack, frame, instruction);
+                    case NEWARRAY -> newArray(frame, instruction);
                     case BIPUSH -> {
                         frame.inc();
                         frame.push(new Value.Byte((byte) instruction.firsOperand()));
@@ -305,7 +305,7 @@ public class ExecutionEngine {
         if (constant instanceof IntoValue i) {
             frame.push(i.into());
         } else {
-            throw com.lewigh.xsjvm.engine.StackFrame.Exception.create("Cannot operate LDC with CP value that is not IntoValue [%s]".formatted(constant), frame);
+            throw StackFrame.Exception.create("Cannot operate LDC with CP value that is not IntoValue [%s]".formatted(constant), frame);
         }
     }
 
@@ -372,7 +372,7 @@ public class ExecutionEngine {
 
         var value = frame.pop();
 
-        if (value instanceof Value.Reference ref) {
+        if (value instanceof Value.Ref ref) {
             if (mustBeNull == ref.isNull()) {
                 frame.goTo(jumpIp);
                 return true;
@@ -391,14 +391,14 @@ public class ExecutionEngine {
         frame.inc();
 
         ClassAndField cnf = resolveField(frame, instruction, threadStack);
-        Klass klass = cnf.klass();
-        Field targetField = cnf.targetField();
+        KlassDesc klass = cnf.klass();
+        FieldDesc field = cnf.field();
+        long address = klass.staticAddress() + field.offset();
+        Jtype.Primitive type = field.type().primitive();
 
-        memoryManager.putWithType(
-                klass.state().getStaticAddress() + targetField.offset(),
-                targetField.type().primitive(),
-                (Number) frame.pop().getVal()
-        );
+        var value = (Number) frame.pop().getVal();
+
+        memoryManager.putWithType(address, type, value);
     }
 
     private void getStatic(StackFrame frame, Instruction instruction, ThreadStack threadStack) {
@@ -406,10 +406,10 @@ public class ExecutionEngine {
 
         ClassAndField cnf = resolveField(frame, instruction, threadStack);
 
-        Value value = memoryManager.getWithType(
-                cnf.klass().state().getStaticAddress() + cnf.targetField().offset(),
-                cnf.targetField().type().primitive()
-        );
+        var address = cnf.klass().staticAddress() + cnf.field().offset();
+        var type = cnf.field().type().primitive();
+
+        Value value = memoryManager.getWithType(address, type);
 
         frame.push(value);
     }
@@ -418,7 +418,7 @@ public class ExecutionEngine {
         frame.inc();
 
         ClassAndField classAndField = resolveField(frame, instruction, threadStack);
-        Field targetField = classAndField.targetField();
+        FieldDesc targetField = classAndField.field();
 
         Object value = frame.pop().getVal();
         long objRef = frame.pop().asRef();
@@ -434,7 +434,7 @@ public class ExecutionEngine {
         frame.inc();
 
         ClassAndField classAndField = resolveField(frame, instruction, threadStack);
-        Field targetField = classAndField.targetField();
+        FieldDesc targetField = classAndField.field();
 
         long objRef = frame.pop().asRef();
 
@@ -459,14 +459,14 @@ public class ExecutionEngine {
 
         String fieldName = cp.resolveUtf8Ref(nameAndTypeInfo.nameIndex());
 
-        Klass klass = getClass(className, threadStack);
+        KlassDesc klass = getClass(className, threadStack);
 
-        Field targetField = klass.fieldGroup().fields().get(className + "." + fieldName);
+        FieldDesc targetField = klass.fieldGroup().fields().get(className + "." + fieldName);
 
         return new ClassAndField(klass, targetField);
     }
 
-    private record ClassAndField(@NonNull Klass klass, @NonNull Field targetField) {
+    private record ClassAndField(@NonNull KlassDesc klass, @NonNull FieldDesc field) {
     }
 
     public void invoke(InvokeType invokeType, ThreadStack threadStack, StackFrame frame, Instruction instruction) {
@@ -485,8 +485,8 @@ public class ExecutionEngine {
 
         // PROCESSING REFERENCES OF CLASS RECEIVING OBJECTS AND COMPARING THE CLASS WITH A VALID ONE
 
-        Klass targetClass = getClass(className, threadStack);
-        Method method = targetClass.findMethod(methodName, methodDescriptor, invokeType);
+        KlassDesc targetClass = getClass(className, threadStack);
+        MethodDesc method = targetClass.findMethod(methodName, methodDescriptor, invokeType);
 
         if (method.fNative()) {
             System.out.printf("Call native method %s%n", method.name());
@@ -511,19 +511,19 @@ public class ExecutionEngine {
 
         String className = cp.resolveClassRef(classConstId);
 
-        Klass newInstanceClassInfo = getClass(className, threadStack);
+        KlassDesc newInstanceClassInfo = getClass(className, threadStack);
 
-        Collection<Field> values = newInstanceClassInfo.fieldGroup().fields().values().stream().filter(a -> !a.accStatic()).toList();
+        Collection<FieldDesc> values = newInstanceClassInfo.fieldGroup().fields().values().stream().filter(a -> !a.accStatic()).toList();
 
         long address = memoryManager.allocateObject(
                 newInstanceClassInfo.id(),
                 values,
                 newInstanceClassInfo.fieldGroup().instanceSize());
 
-        frame.push(Value.Reference.from(address));
+        frame.push(Value.Ref.from(address));
     }
 
-    private void newArray(ThreadStack threadStack, StackFrame frame, Instruction instruction) {
+    private void newArray(StackFrame frame, Instruction instruction) {
         frame.inc();
 
         byte typeCode = (byte) instruction.firsOperand();
@@ -543,7 +543,7 @@ public class ExecutionEngine {
 
         long arrayRef = memoryManager.allocateArray(arrayType.getPrimitive(), size);
 
-        frame.push(Value.Reference.from(arrayRef));
+        frame.push(Value.Ref.from(arrayRef));
 
     }
 
@@ -553,22 +553,20 @@ public class ExecutionEngine {
         ExceptionTable[] exceptionTables = frame.getMethod().exceptionTable();
     }
 
-    private Klass getClass(String className, ThreadStack threadStack) {
+    private KlassDesc getClass(String className, ThreadStack threadStack) {
 
-        Klass loaded = classLoader.load(className);
+        KlassDesc loaded = classLoader.load(className);
 
-        Klass.State state = loaded.state();
-
-        if (!state.isInit()) {
-            state.setInit(true);
+        if (!loaded.isInit()) {
+            loaded.setInit(true);
             initClass(threadStack, loaded);
         }
 
         return loaded;
     }
 
-    private void initClass(ThreadStack threadStack, Klass klass) {
-        Method clinit = klass.getClinit();
+    private void initClass(ThreadStack threadStack, KlassDesc klass) {
+        MethodDesc clinit = klass.getClinit();
 
         if (clinit != null) {
             System.out.printf("  Init    %s%n", klass.name());
@@ -576,7 +574,7 @@ public class ExecutionEngine {
             var staticFields = new ArrayList<>(klass.fieldGroup().fields().values());
 
             long classObjectAddress = memoryManager.allocateObject(klass.id(), staticFields, klass.fieldGroup().staticSize());
-            klass.state().setStaticAddress(classObjectAddress);
+            klass.setStaticAddress(classObjectAddress);
 
             StackFrame clinitFrame = StackFrame.create(klass, clinit);
 

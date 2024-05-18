@@ -2,8 +2,8 @@ package com.lewigh.xsjvm.engine;
 
 import com.lewigh.xsjvm.VmException;
 import com.lewigh.xsjvm.engine.runtime.Jtype;
-import com.lewigh.xsjvm.engine.runtime.Klass;
-import com.lewigh.xsjvm.engine.runtime.Method;
+import com.lewigh.xsjvm.engine.runtime.KlassDesc;
+import com.lewigh.xsjvm.engine.runtime.MethodDesc;
 import com.lewigh.xsjvm.engine.runtime.Value;
 import com.lewigh.xsjvm.classloader.reader.info.attribute.Instruction;
 import com.lewigh.xsjvm.classloader.reader.info.attribute.OpCode;
@@ -11,27 +11,26 @@ import com.lewigh.xsjvm.classloader.reader.pool.ConstantPool;
 import lombok.*;
 
 import java.util.*;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.joining;
 
 @Data
 @RequiredArgsConstructor
 public class StackFrame {
-    private final Klass klass;
-    private final Method method;
+    private final KlassDesc klass;
+    private final MethodDesc method;
     @Getter(AccessLevel.PRIVATE)
     private final Queue<Value> stack;
     @Getter(AccessLevel.PRIVATE)
     private final Value[] localTable;
+    private final int paramLen;
 
     short ip = 0;
 
-    public static StackFrame create(@NonNull Klass klass, @NonNull Method methodMeta) {
+    public static StackFrame create(@NonNull KlassDesc klass, @NonNull MethodDesc methodMeta) {
         Value[] locals = new Value[methodMeta.maxLocals()];
 
-        return create(klass, methodMeta, locals);
+        return create(klass, methodMeta, locals, 0);
     }
 
     public void push(Value value) {
@@ -86,9 +85,17 @@ public class StackFrame {
         return klass.constantPool();
     }
 
-    public StackFrame fork(@NonNull Klass klass, @NonNull Method method) {
-        Value[] locals = new Value[method.maxLocals()];
-        Jtype[] methodParamTypes = method.descriptor().paarameterTypes();
+    public Value[] getParameters() {
+        Value[] params = new Value[paramLen];
+
+        System.arraycopy(localTable, 0, params, 0, paramLen);
+
+        return params;
+    }
+
+    public StackFrame fork(@NonNull KlassDesc klass, @NonNull MethodDesc methodDesc) {
+        Value[] locals = new Value[methodDesc.maxLocals()];
+        Jtype[] methodParamTypes = methodDesc.descriptor().paarameterTypes();
 
         int passed = 0;
 
@@ -101,7 +108,7 @@ public class StackFrame {
             throw StackFrame.Exception.create(
                     "Error while preraring method call arguments for method %s%s%nExpected %d arguments%n%s%nbut passed %d%n%s%n%n".formatted(
                             klass.name(),
-                            method.name(),
+                            methodDesc.name(),
                             methodParamTypes.length,
                             Arrays.stream(methodParamTypes).map(a -> " " + a.toString()).collect(joining("\n")),
                             passed,
@@ -110,16 +117,17 @@ public class StackFrame {
                     this);
         }
 
-        return create(klass, method, locals);
+        return create(klass, methodDesc, locals, passed);
     }
 
 
-    private static StackFrame create(@NonNull Klass klass, @NonNull Method method, @NonNull Value[] locals) {
+    private static StackFrame create(@NonNull KlassDesc klass, @NonNull MethodDesc method, @NonNull Value[] locals, int paramsLen) {
         return new StackFrame(
                 klass,
                 method,
                 Collections.asLifoQueue(new ArrayDeque<>(method.maxStack())),
-                locals
+                locals,
+                paramsLen
         );
     }
 

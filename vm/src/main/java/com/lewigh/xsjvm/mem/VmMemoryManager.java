@@ -1,7 +1,7 @@
 package com.lewigh.xsjvm.mem;
 
 import com.lewigh.xsjvm.MemoryManagmentException;
-import com.lewigh.xsjvm.engine.runtime.Field;
+import com.lewigh.xsjvm.engine.runtime.FieldDesc;
 import com.lewigh.xsjvm.engine.runtime.Jtype;
 import com.lewigh.xsjvm.engine.runtime.Value;
 
@@ -9,7 +9,7 @@ import java.util.Collection;
 
 public interface VmMemoryManager {
 
-    long allocateObject(int classId, Collection<Field> fields, long payloadSize) throws MemoryManagmentException;
+    long allocateObject(int classId, Collection<FieldDesc> fields, long payloadSize) throws MemoryManagmentException;
 
     long allocateArray(Jtype.Primitive type, int size) throws MemoryManagmentException;
 

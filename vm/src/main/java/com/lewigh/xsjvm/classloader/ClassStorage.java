@@ -1,24 +1,24 @@
 package com.lewigh.xsjvm.classloader;
 
-import com.lewigh.xsjvm.engine.runtime.Klass;
+import com.lewigh.xsjvm.engine.runtime.KlassDesc;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class ClassStorage {
-    private final Map<String, Klass> nameAndClasses = new HashMap<>();
-    private final Map<Integer, Klass> idAndClass = new HashMap<>();
+    private final Map<String, KlassDesc> nameAndClasses = new HashMap<>();
+    private final Map<Integer, KlassDesc> idAndClass = new HashMap<>();
 
     private final Map<Integer, Long> staticTable = new HashMap<>();
 
     private int nextId = 0;
 
 
-    public Klass getById(int classId) {
+    public KlassDesc getById(int classId) {
         return idAndClass.get(classId);
     }
 
-    public Klass getByName(String className) {
+    public KlassDesc getByName(String className) {
         return nameAndClasses.get(className);
     }
 
@@ -27,7 +27,7 @@ public class ClassStorage {
         return nextId;
     }
 
-    public void store(Klass klass) {
+    public void store(KlassDesc klass) {
         idAndClass.put(klass.id(), klass);
         nameAndClasses.put(klass.name(), klass);
     }

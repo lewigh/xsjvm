@@ -1,6 +1,6 @@
 package com.lewigh.xsjvm.engine.runtime;
 
-public record Field(
+public record FieldDesc(
         String name,
         Jtype type,
         Access access,

@@ -36,7 +36,7 @@ public sealed interface Constant {
     record ConstantStringRef(short index) implements Constant, IntoValue {
         @Override
         public Value into() {
-            return Value.Reference.from(index);
+            return Value.Ref.from(index);
         }
     }
 
@@ -46,7 +46,7 @@ public sealed interface Constant {
     record Class(short nameIndex) implements Constant, IntoValue {
         @Override
         public Value into() {
-            return Value.Reference.from(nameIndex);
+            return Value.Ref.from(nameIndex);
         }
     }
 

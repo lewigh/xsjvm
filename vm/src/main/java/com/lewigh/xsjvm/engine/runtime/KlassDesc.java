@@ -3,7 +3,6 @@ package com.lewigh.xsjvm.engine.runtime;
 import com.lewigh.xsjvm.engine.InvokeType;
 import com.lewigh.xsjvm.classloader.reader.flag.ClassAccessFlag;
 import com.lewigh.xsjvm.classloader.reader.pool.ConstantPool;
-import lombok.Data;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -11,30 +10,46 @@ import java.util.Objects;
 
 import static com.lewigh.xsjvm.SymbolTable.CLINIT_METH_FULL_NAME;
 
-public record Klass(
+public record KlassDesc(
         int id,
         String name,
-        Klass superKlass,
+        KlassDesc superKlass,
         ClassAccessFlag[] accessFlags,
-        Klass[] interfaces,
-        FieldGroup fieldGroup,
-        Map<String, Method> methods,
-        Map<String, Method> vtable,
+        KlassDesc[] interfaces,
+        FieldDescGroup fieldGroup,
+        Map<String, MethodDesc> methods,
+        Map<String, MethodDesc> vtable,
         ConstantPool constantPool,
         State state
 ) {
 
-    @Data
     public static class State {
         private boolean init;
         private long staticAddress;
     }
 
-    public Method getClinit() {
+
+    public boolean isInit() {
+        return state.init;
+    }
+
+    public void setInit(boolean n) {
+        state.init = n;
+    }
+
+    public void setStaticAddress(long address) {
+        state.staticAddress = address;
+    }
+
+    public long staticAddress() {
+        return state.staticAddress;
+    }
+
+    public MethodDesc getClinit() {
         return methods().get(CLINIT_METH_FULL_NAME);
     }
 
-    public Method findMethod(String name, String descriptor, InvokeType invokeType) {
+    public MethodDesc findMethod(String name, String descriptor, InvokeType invokeType) {
         var signature = "%s%s".formatted(name, descriptor);
         return switch (invokeType) {
             case STATIC -> {
@@ -58,7 +73,7 @@ public record Klass(
         };
     }
 
-    private void checkAccess(String name, Method methodMeta, InvokeType invokeType) {
+    private void checkAccess(String name, MethodDesc methodMeta, InvokeType invokeType) {
         if (methodMeta == null) {
             throw new IllegalArgumentException("Method %s is not found".formatted(name));
         }
@@ -71,7 +86,7 @@ public record Klass(
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        Klass klass = (Klass) o;
+        KlassDesc klass = (KlassDesc) o;
         return Objects.equals(name, klass.name)
                 && Objects.equals(superKlass, klass.superKlass)
                 && Arrays.equals(accessFlags, klass.accessFlags)

@@ -16,6 +16,11 @@ public sealed interface Value {
         public Number asNumber() {
             return value;
         }
+
+        @Override
+        public String toString() {
+            return "Byte:" + value;
+        }
     }
 
     record Bool(boolean value) implements Value {
@@ -27,6 +32,11 @@ public sealed interface Value {
         @Override
         public Number asNumber() {
             return value ? 1 : 0;
+        }
+
+        @Override
+        public String toString() {
+            return "Bool:" + value;
         }
     }
 
@@ -40,6 +50,11 @@ public sealed interface Value {
         public Number asNumber() {
             return value;
         }
+
+        @Override
+        public String toString() {
+            return "Short:" + value;
+        }
     }
 
     record Char(char value) implements Value {
@@ -51,6 +66,11 @@ public sealed interface Value {
         @Override
         public Number asNumber() {
             return (int) value;
+        }
+
+        @Override
+        public String toString() {
+            return "Char:" + value;
         }
     }
 
@@ -64,6 +84,11 @@ public sealed interface Value {
         public Number asNumber() {
             return value;
         }
+
+        @Override
+        public String toString() {
+            return "Int:" + value;
+        }
     }
 
     record Long(long value) implements Value {
@@ -75,6 +100,11 @@ public sealed interface Value {
         @Override
         public Number asNumber() {
             return value;
+        }
+
+        @Override
+        public String toString() {
+            return "Long:" + value;
         }
     }
 
@@ -88,6 +118,11 @@ public sealed interface Value {
         public Number asNumber() {
             return value;
         }
+
+        @Override
+        public String toString() {
+            return "Float:" + value;
+        }
     }
 
     record Double(double value) implements Value {
@@ -100,24 +135,28 @@ public sealed interface Value {
         public Number asNumber() {
             return value;
         }
+
+        @Override
+        public String toString() {
+            return "Double:" + value;
+        }
     }
 
     @Getter
     @EqualsAndHashCode
-    @ToString
-    non-sealed class Reference implements Value {
+    non-sealed class Ref implements Value {
 
         private final long value;
 
-        private Reference(long ref) {
+        private Ref(long ref) {
             this.value = ref;
         }
 
-        public static Reference from(long ref) {
+        public static Ref from(long ref) {
             if (ref == 0) {
                 return new Null();
             }
-            return new Reference(ref);
+            return new Ref(ref);
         }
 
         public boolean isNull() {
@@ -133,11 +172,21 @@ public sealed interface Value {
         public Number asNumber() {
             return value;
         }
+
+        @Override
+        public String toString() {
+            return "Ref:" + value;
+        }
     }
 
-    class Null extends Reference {
+    class Null extends Ref {
         public Null() {
             super(0);
+        }
+
+        @Override
+        public String toString() {
+            return "Null";
         }
     }
 
@@ -203,7 +252,7 @@ public sealed interface Value {
     }
 
     default long asRef() {
-        if (this instanceof Reference reference) {
+        if (this instanceof Ref reference) {
             if (reference instanceof Null) {
                 throw new NullPointerException();
             }

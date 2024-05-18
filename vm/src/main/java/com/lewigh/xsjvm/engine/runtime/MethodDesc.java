@@ -7,7 +7,7 @@ import lombok.NonNull;
 import java.util.Arrays;
 import java.util.Objects;
 
-public record Method(
+public record MethodDesc(
         @NonNull String name,
         @NonNull MethodDescriptor descriptor,
         @NonNull Access access,
@@ -30,7 +30,7 @@ public record Method(
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        Method method = (Method) o;
+        MethodDesc method = (MethodDesc) o;
         return fStatic == method.fStatic && fFinal == method.fFinal && fNative == method.fNative && fSynchronized == method.fSynchronized && fAbstract == method.fAbstract && fVarargs == method.fVarargs && fBridge == method.fBridge && fSyntetic == method.fSyntetic && fStrict == method.fStrict && maxStack == method.maxStack && maxLocals == method.maxLocals && Objects.equals(name, method.name) && Objects.equals(descriptor, method.descriptor) && access == method.access && Arrays.equals(instructions, method.instructions) && Arrays.equals(exceptionTable, method.exceptionTable);
     }
 

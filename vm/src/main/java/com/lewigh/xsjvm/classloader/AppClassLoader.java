@@ -31,13 +31,13 @@ public class AppClassLoader {
     }
 
 
-    public Klass load(String className) {
+    public KlassDesc load(String className) {
         return requireNonNullElseGet(
                 classStorage.getByName(className),
                 () -> executeLoading(className));
     }
 
-    private Klass executeLoading(String className) {
+    private KlassDesc executeLoading(String className) {
 
         System.out.printf("  Loading %s%n", className);
 
@@ -53,16 +53,16 @@ public class AppClassLoader {
 
         var classFile = reader.read(classFullPath.toString());
 
-        Klass superClass = resolveSuper(classFile);
-        Klass[] interfaces = resolveInterfaces(classFile);
-        HashMap<String, Method> methods = new HashMap<>();
-        HashMap<String, Method> vtable = new HashMap<>();
+        KlassDesc superClass = resolveSuper(classFile);
+        KlassDesc[] interfaces = resolveInterfaces(classFile);
+        HashMap<String, MethodDesc> methods = new HashMap<>();
+        HashMap<String, MethodDesc> vtable = new HashMap<>();
 
-        FieldGroup fields = resolveFields(classFile, superClass);
+        FieldDescGroup fields = resolveFields(classFile, superClass);
 
         resolveMethods(classFile, superClass, methods, vtable);
 
-        Klass newklass = new Klass(
+        KlassDesc newklass = new KlassDesc(
                 classStorage.nextId(),
                 classFile.thisName(),
                 superClass,
@@ -72,7 +72,7 @@ public class AppClassLoader {
                 methods,
                 vtable,
                 classFile.constantPool(),
-                new Klass.State()
+                new KlassDesc.State()
         );
 
         classStorage.store(newklass);
@@ -80,14 +80,14 @@ public class AppClassLoader {
         return newklass;
     }
 
-    private Klass resolveSuper(ClassFile classFile) {
+    private KlassDesc resolveSuper(ClassFile classFile) {
         return classFile.superName() != null ? load(classFile.superName()) : null;
     }
 
-    private Klass[] resolveInterfaces(ClassFile classFile) {
+    private KlassDesc[] resolveInterfaces(ClassFile classFile) {
 
         String[] interfacesNames = classFile.interfaces();
-        Klass[] interfaces = new Klass[interfacesNames.length];
+        KlassDesc[] interfaces = new KlassDesc[interfacesNames.length];
 
         for (int i = 0; i < interfaces.length; i++) {
             interfaces[i] = load(interfacesNames[0]);
@@ -96,9 +96,9 @@ public class AppClassLoader {
         return interfaces;
     }
 
-    private FieldGroup resolveFields(ClassFile classFile, Klass superClass) {
+    private FieldDescGroup resolveFields(ClassFile classFile, KlassDesc superClass) {
         FieldInfo[] infoFields = classFile.fields();
-        LinkedHashMap<String, Field> kFields = new LinkedHashMap<>(infoFields.length);
+        LinkedHashMap<String, FieldDesc> kFields = new LinkedHashMap<>(infoFields.length);
 
         long instanceOffset = 0;
         long staticOffset = 0;
@@ -108,7 +108,7 @@ public class AppClassLoader {
             instanceOffset += superClass.fieldGroup().instanceSize();
             staticOffset += superClass.fieldGroup().staticSize();
 
-            LinkedHashMap<String, Field> superFields = superClass.fieldGroup().fields();
+            LinkedHashMap<String, FieldDesc> superFields = superClass.fieldGroup().fields();
 
             kFields.putAll(superFields);
         }
@@ -117,7 +117,7 @@ public class AppClassLoader {
 
             var typeAndIdx = resolveType(info.descriptor());
 
-            Field field = new Field(
+            FieldDesc field = new FieldDesc(
                     info.name(),
                     typeAndIdx,
                     computeAccess(info),
@@ -146,7 +146,7 @@ public class AppClassLoader {
             }
         }
 
-        return new FieldGroup(kFields, instanceOffset, staticOffset);
+        return new FieldDescGroup(kFields, instanceOffset, staticOffset);
     }
 
     private Access computeAccess(FieldInfo field) {
@@ -172,13 +172,13 @@ public class AppClassLoader {
     }
 
 
-    private void resolveMethods(ClassFile classFile, Klass superClass, Map<String, Method> methods, Map<String, Method> virtuals) {
+    private void resolveMethods(ClassFile classFile, KlassDesc superClass, Map<String, MethodDesc> methods, Map<String, MethodDesc> virtuals) {
 
         for (var methodInfo : classFile.methods()) {
             var mName = methodInfo.name();
 
             if (methodInfo.isNative()) {
-                Method nativeMethod = new Method(
+                MethodDesc nativeMethod = new MethodDesc(
                         mName,
                         resolveMethodDescriptor(methodInfo.descriptor()),
                         computeAccess(methodInfo),
@@ -220,7 +220,7 @@ public class AppClassLoader {
 
             Access access = computeAccess(methodInfo);
 
-            Method methodMeta = new Method(
+            MethodDesc methodMeta = new MethodDesc(
                     mName,
                     resolveMethodDescriptor(methodInfo.descriptor()),
                     access,
@@ -245,13 +245,13 @@ public class AppClassLoader {
         virtuals.putAll(methods);
 
         if (superClass != null) {
-            Map<String, Method> superMethods = superClass.methods();
+            Map<String, MethodDesc> superMethods = superClass.methods();
 
             for (var mEntry : superMethods.entrySet()) {
                 String sName = mEntry.getKey();
 
                 if (!virtuals.containsKey(sName)) {
-                    Method superMethod = mEntry.getValue();
+                    MethodDesc superMethod = mEntry.getValue();
 
                     if (!superMethod.fFinal() && !superMethod.fStatic() && superMethod.access() != PRIVATE) {
                         virtuals.put(sName, superMethod);
