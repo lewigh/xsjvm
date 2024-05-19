@@ -7,7 +7,7 @@ import java.util.Objects;
 
 public record Instruction(@NonNull OpCode opCode, @NonNull short[] operamds) {
 
-    public short firsOperand() {
+    public short firstOperand() {
         checkLen();
         return operamds[0];
     }

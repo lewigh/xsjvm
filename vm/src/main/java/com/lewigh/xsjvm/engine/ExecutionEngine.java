@@ -103,7 +103,7 @@ public class ExecutionEngine {
                     case ISTORE -> {
                         frame.inc();
 
-                        frame.popAndStoreTo(instruction.firsOperand());
+                        frame.popAndStoreTo(instruction.firstOperand());
                     }
 
                     case ISTORE_0 -> {
@@ -123,7 +123,7 @@ public class ExecutionEngine {
                         frame.inc();
                         frame.popAndStoreTo(3);
                     }
-                    case FSTORE -> frame.popAndStoreTo(instruction.firsOperand());
+                    case FSTORE -> frame.popAndStoreTo(instruction.firstOperand());
                     case FSTORE_0 -> {
                         frame.inc();
                         frame.popAndStoreTo(0);
@@ -200,7 +200,7 @@ public class ExecutionEngine {
                     case NEWARRAY -> newArray(frame, instruction);
                     case BIPUSH -> {
                         frame.inc();
-                        frame.push(new Value.Byte((byte) instruction.firsOperand()));
+                        frame.push(new Value.Byte((byte) instruction.firstOperand()));
                     }
                     case ASTORE_0 -> {
                         frame.inc();
@@ -220,7 +220,7 @@ public class ExecutionEngine {
                     }
                     case ASTORE -> {
                         frame.inc();
-                        short localId = instruction.firsOperand();
+                        short localId = instruction.firstOperand();
                         frame.popAndStoreTo(localId);
                     }
                     case ALOAD_0 -> {
@@ -298,7 +298,7 @@ public class ExecutionEngine {
 
     private static void ldc(StackFrame frame, Instruction instruction) {
         frame.inc();
-        short cpRef = instruction.firsOperand();
+        short cpRef = instruction.firstOperand();
 
         Constant constant = frame.getPool().get(cpRef);
 
@@ -347,7 +347,7 @@ public class ExecutionEngine {
 
     private boolean icmp(CmpType cmpType, StackFrame frame, Instruction instruction) {
         frame.inc();
-        var jumpIp = instruction.firsOperand();
+        var jumpIp = instruction.firstOperand();
 
         var b = frame.pop().asInt();
         var a = frame.pop().asInt();
@@ -368,7 +368,7 @@ public class ExecutionEngine {
 
     private boolean ifNullable(StackFrame frame, Instruction instruction, boolean mustBeNull) {
         frame.inc();
-        var jumpIp = instruction.firsOperand();
+        var jumpIp = instruction.firstOperand();
 
         var value = frame.pop();
 
@@ -447,7 +447,7 @@ public class ExecutionEngine {
     }
 
     private ClassAndField resolveField(StackFrame frame, Instruction instruction, ThreadStack threadStack) {
-        var fieldId = instruction.firsOperand();
+        var fieldId = instruction.firstOperand();
 
         ConstantPool cp = frame.getPool();
 
@@ -472,7 +472,7 @@ public class ExecutionEngine {
     public void invoke(InvokeType invokeType, ThreadStack threadStack, StackFrame frame, Instruction instruction) {
         var cp = frame.getPool();
 
-        var methodIdx = instruction.firsOperand();
+        var methodIdx = instruction.firstOperand();
 
         var methodRefInfo = cp.resolveMethorRefInfo(methodIdx);
 
@@ -507,7 +507,7 @@ public class ExecutionEngine {
 
         ConstantPool cp = frame.getPool();
 
-        var classConstId = instruction.firsOperand();
+        var classConstId = instruction.firstOperand();
 
         String className = cp.resolveClassRef(classConstId);
 
@@ -526,7 +526,7 @@ public class ExecutionEngine {
     private void newArray(StackFrame frame, Instruction instruction) {
         frame.inc();
 
-        byte typeCode = (byte) instruction.firsOperand();
+        byte typeCode = (byte) instruction.firstOperand();
 
         var s = frame.pop();
 
