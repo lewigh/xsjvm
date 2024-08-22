@@ -2,13 +2,13 @@ package com.lewigh.xsjvm.classloader.reader.pool;
 
 import lombok.Data;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
 import java.util.Objects;
 
 @Data
 public class ConstantPool {
-    private final Map<Short, Constant> constants = new HashMap<>();
+
+    private final ArrayList<Constant> constants;
 
     public Constant get(short index) {
         return Objects.requireNonNull(constants.get(index), "Invalid index %d of the constant pool".formatted(index));
@@ -34,10 +34,6 @@ public class ConstantPool {
 
     public Constant.NameAndTypeInfo resolveNameAndTypeInfo(short index) {
         return (Constant.NameAndTypeInfo) get(index);
-    }
-
-    public void add(short index, Constant object) {
-        constants.put(index, object);
     }
 
     public short check(short index) {

@@ -13,6 +13,8 @@ import lombok.NonNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 import static com.lewigh.xsjvm.SymbolTable.ENTRY_POINT_METHOD_DESC;
 import static com.lewigh.xsjvm.SymbolTable.ENTRY_POINT_METHOD_NAME;
@@ -22,6 +24,10 @@ public class ExecutionEngine {
 
     private final AppClassLoader classLoader;
     private final VmMemoryManager memoryManager;
+
+    private final Map<Constant.MethodRefInfo, ClassAndMethodDesc> methodDescriptors = new HashMap<>();
+    private final Map<Constant.FieldInfo, ClassAndFieldDesc> fieldDescriptors = new HashMap<>();
+
 
     public ExecutionEngine(AppClassLoader appClassLoader, VmMemoryManager allocator) {
         this.classLoader = appClassLoader;
@@ -390,7 +396,7 @@ public class ExecutionEngine {
     private void putStatic(StackFrame frame, Instruction instruction, ThreadStack threadStack) {
         frame.inc();
 
-        ClassAndField cnf = resolveField(frame, instruction, threadStack);
+        ClassAndFieldDesc cnf = obtainField(frame, instruction, threadStack);
         KlassDesc klass = cnf.klass();
         FieldDesc field = cnf.field();
         long address = klass.staticAddress() + field.offset();
@@ -404,7 +410,7 @@ public class ExecutionEngine {
     private void getStatic(StackFrame frame, Instruction instruction, ThreadStack threadStack) {
         frame.inc();
 
-        ClassAndField cnf = resolveField(frame, instruction, threadStack);
+        ClassAndFieldDesc cnf = obtainField(frame, instruction, threadStack);
 
         var address = cnf.klass().staticAddress() + cnf.field().offset();
         var type = cnf.field().type().primitive();
@@ -417,7 +423,7 @@ public class ExecutionEngine {
     private void putField(ThreadStack threadStack, StackFrame frame, Instruction instruction) {
         frame.inc();
 
-        ClassAndField classAndField = resolveField(frame, instruction, threadStack);
+        ClassAndFieldDesc classAndField = obtainField(frame, instruction, threadStack);
         FieldDesc targetField = classAndField.field();
 
         Object value = frame.pop().getVal();
@@ -433,7 +439,7 @@ public class ExecutionEngine {
     private void getField(ThreadStack threadStack, StackFrame frame, Instruction instruction) {
         frame.inc();
 
-        ClassAndField classAndField = resolveField(frame, instruction, threadStack);
+        ClassAndFieldDesc classAndField = obtainField(frame, instruction, threadStack);
         FieldDesc targetField = classAndField.field();
 
         long objRef = frame.pop().asRef();
@@ -446,54 +452,23 @@ public class ExecutionEngine {
         frame.push(value);
     }
 
-    private ClassAndField resolveField(StackFrame frame, Instruction instruction, ThreadStack threadStack) {
-        var fieldId = instruction.firstOperand();
 
-        ConstantPool cp = frame.getPool();
-
-        Constant.FieldInfo fieldInfo = cp.resolveFieldInfo(fieldId);
-
-        String className = cp.resolveClassRef(fieldInfo.classIndex());
-
-        Constant.NameAndTypeInfo nameAndTypeInfo = cp.resolveNameAndTypeInfo(fieldInfo.nameAndTypeIndex());
-
-        String fieldName = cp.resolveUtf8Ref(nameAndTypeInfo.nameIndex());
-
-        KlassDesc klass = getClass(className, threadStack);
-
-        FieldDesc targetField = klass.fieldGroup().fields().get(className + "." + fieldName);
-
-        return new ClassAndField(klass, targetField);
-    }
-
-    private record ClassAndField(@NonNull KlassDesc klass, @NonNull FieldDesc field) {
+    private record ClassAndFieldDesc(@NonNull KlassDesc klass, @NonNull FieldDesc field) {
     }
 
     public void invoke(InvokeType invokeType, ThreadStack threadStack, StackFrame frame, Instruction instruction) {
-        var cp = frame.getPool();
-
         var methodIdx = instruction.firstOperand();
 
-        var methodRefInfo = cp.resolveMethorRefInfo(methodIdx);
-
-        var className = cp.resolveClassRef(methodRefInfo.classIndex());
-
-        var nameAndTypeInfo = cp.resolveNameAndTypeInfo(methodRefInfo.nameAndTypeIndex());
-
-        var methodName = cp.resolveUtf8Ref(nameAndTypeInfo.nameIndex());
-        var methodDescriptor = cp.resolveUtf8Ref(nameAndTypeInfo.descriptorIndex());
-
-        // PROCESSING REFERENCES OF CLASS RECEIVING OBJECTS AND COMPARING THE CLASS WITH A VALID ONE
-
-        KlassDesc targetClass = getClass(className, threadStack);
-        MethodDesc method = targetClass.findMethod(methodName, methodDescriptor, invokeType);
+        ClassAndMethodDesc cnm = obtainMethodDesc(methodIdx, invokeType, threadStack, frame.getPool());
+        MethodDesc method = cnm.method();
+        KlassDesc klass = cnm.klass();
 
         if (method.fNative()) {
             System.out.printf("Call native method %s%n", method.name());
             frame.inc();
 
         } else {
-            StackFrame stackFrame = frame.fork(targetClass, method);
+            StackFrame stackFrame = frame.fork(klass, method);
 
             threadStack.push(stackFrame);
 
@@ -582,6 +557,72 @@ public class ExecutionEngine {
 
             executeMethod(threadStack);
         }
+    }
+
+    record ClassAndMethodDesc(@NonNull KlassDesc klass, @NonNull MethodDesc method) {
+    }
+
+    private ClassAndMethodDesc obtainMethodDesc(short methodIdx, InvokeType invokeType, ThreadStack threadStack, ConstantPool cp) {
+
+        var methodRefInfo = cp.resolveMethorRefInfo(methodIdx);
+
+        ClassAndMethodDesc cnm = methodDescriptors.get(methodRefInfo);
+
+        if (cnm != null) {
+            return cnm;
+        }
+
+        var className = cp.resolveClassRef(methodRefInfo.classIndex());
+
+        var nameAndTypeInfo = cp.resolveNameAndTypeInfo(methodRefInfo.nameAndTypeIndex());
+
+        var methodName = cp.resolveUtf8Ref(nameAndTypeInfo.nameIndex());
+
+        var methodDescriptor = cp.resolveUtf8Ref(nameAndTypeInfo.descriptorIndex());
+
+        // PROCESSING REFERENCES OF CLASS RECEIVING OBJECTS AND COMPARING THE CLASS WITH A VALID ONE
+
+        KlassDesc targetClass = getClass(className, threadStack);
+
+        MethodDesc method = targetClass.findMethod(methodName, methodDescriptor, invokeType);
+
+        cnm = new ClassAndMethodDesc(targetClass, method);
+
+//        if (cnm.method.fStatic() || cnm.method.)
+
+        methodDescriptors.put(methodRefInfo, cnm);
+
+        return cnm;
+    }
+
+    private ClassAndFieldDesc obtainField(StackFrame frame, Instruction instruction, ThreadStack threadStack) {
+        var fieldId = instruction.firstOperand();
+
+        ConstantPool cp = frame.getPool();
+
+        Constant.FieldInfo fieldInfo = cp.resolveFieldInfo(fieldId);
+
+        ClassAndFieldDesc cnf = fieldDescriptors.get(fieldInfo);
+
+        if (cnf != null) {
+            return cnf;
+        }
+
+        String className = cp.resolveClassRef(fieldInfo.classIndex());
+
+        Constant.NameAndTypeInfo nameAndTypeInfo = cp.resolveNameAndTypeInfo(fieldInfo.nameAndTypeIndex());
+
+        String fieldName = cp.resolveUtf8Ref(nameAndTypeInfo.nameIndex());
+
+        KlassDesc klass = getClass(className, threadStack);
+
+        FieldDesc targetField = klass.fieldGroup().fields().get(className + "." + fieldName);
+
+        cnf = new ClassAndFieldDesc(klass, targetField);
+
+        fieldDescriptors.put(fieldInfo, cnf);
+
+        return cnf;
     }
 
 }
