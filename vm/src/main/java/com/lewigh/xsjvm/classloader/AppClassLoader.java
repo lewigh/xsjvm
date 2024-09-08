@@ -1,14 +1,11 @@
 package com.lewigh.xsjvm.classloader;
 
+import com.lewigh.xsjvm.classloader.reader.info.attribute.*;
 import com.lewigh.xsjvm.engine.runtime.*;
 import com.lewigh.xsjvm.classloader.reader.ClassReader;
 import com.lewigh.xsjvm.classloader.reader.info.ClassFile;
 import com.lewigh.xsjvm.classloader.reader.info.FieldInfo;
 import com.lewigh.xsjvm.classloader.reader.info.MethodInfo;
-import com.lewigh.xsjvm.classloader.reader.info.attribute.AttributeInfo;
-import com.lewigh.xsjvm.classloader.reader.info.attribute.CodeAttribute;
-import com.lewigh.xsjvm.classloader.reader.info.attribute.ExceptionTable;
-import com.lewigh.xsjvm.classloader.reader.info.attribute.Instruction;
 
 import java.nio.file.Path;
 import java.util.*;
@@ -194,7 +191,8 @@ public class AppClassLoader {
                         (short) 0,
                         (short) 0,
                         new Instruction[0],
-                        new ExceptionTable[0]
+                        new ExceptionTable[0],
+                        new HashMap<>()
 
                 );
 
@@ -203,6 +201,7 @@ public class AppClassLoader {
 
             AttributeInfo[] attributes = methodInfo.attributes();
 
+            HashMap<Short, Short> lineMapping = new HashMap<>();
 
             CodeAttribute codeAtt = Arrays.stream(attributes)
                     .map(a -> {
@@ -214,9 +213,19 @@ public class AppClassLoader {
                     .filter(a -> a != null)
                     .findFirst().orElse(null);
 
+
             if (codeAtt == null) {
                 continue;
             }
+
+            for (var codeAt : codeAtt.attributes()) {
+                if (codeAt instanceof LineNumberTableAttribute la) {
+                    for (var entry : la.lineNumberTable()) {
+                        lineMapping.put(entry.startPc(), entry.lineNumber());
+                    }
+                }
+            }
+
 
             Access access = computeAccess(methodInfo);
 
@@ -236,7 +245,8 @@ public class AppClassLoader {
                     codeAtt.maxStack(),
                     codeAtt.maxLocals(),
                     codeAtt.code(),
-                    codeAtt.exceptionTable()
+                    codeAtt.exceptionTable(),
+                    lineMapping
             );
 
             methods.put("%s%s".formatted(methodMeta.name(), methodInfo.descriptor()), methodMeta);

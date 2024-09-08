@@ -150,8 +150,11 @@ public class StackFrame {
         public static Exception create(@NonNull String message, @NonNull StackFrame frame) {
             String klassName = frame.getKlass().name();
             String methodName = frame.getMethod().name();
+            Map<Short, Short> lineMapping = frame.getMethod().lineNumberMapping();
 
             Instruction[] instructions = frame.getMethod().instructions();
+
+            var codeLine = getCodeLine(frame, lineMapping);
 
             StringBuilder sb = new StringBuilder();
 
@@ -188,10 +191,24 @@ public class StackFrame {
             }
             String locals = joiner.toString();
 
-            String formatted = "%s Info:%n  class: %s%n  method: %s%n  stack: <|%s%n  locals: %s%n  instructions:%n%s"
-                    .formatted(message, klassName, methodName, stackParams, locals, sb.toString());
+
+            String formatted = "%s Info:%n  class: %s%n  method: %s%n  line: %s %n  stack: <|%s%n  locals: %s%n  instructions:%n%s"
+                    .formatted(message, klassName, methodName, codeLine, stackParams, locals, sb.toString());
 
             return new Exception(formatted);
+        }
+
+        private static int getCodeLine(StackFrame frame, Map<Short, Short> lineMapping) {
+            var ln = 0;
+
+            for (short i = frame.getIp(); i >= 0; i--) {
+                Short i1 = lineMapping.get(i);
+
+                if (i1 != null) {
+                    ln = i1;
+                }
+            }
+            return ln;
         }
     }
 

@@ -5,6 +5,7 @@ import com.lewigh.xsjvm.classloader.reader.info.attribute.Instruction;
 import lombok.NonNull;
 
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Objects;
 
 public record MethodDesc(
@@ -23,7 +24,8 @@ public record MethodDesc(
         short maxStack,
         short maxLocals,
         @NonNull Instruction[] instructions,
-        @NonNull ExceptionTable[] exceptionTable
+        @NonNull ExceptionTable[] exceptionTable,
+        Map<Short, Short> lineNumberMapping
 ) {
 
     @Override
