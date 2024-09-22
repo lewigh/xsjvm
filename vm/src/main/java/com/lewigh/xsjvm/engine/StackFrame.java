@@ -27,6 +27,10 @@ public class StackFrame {
 
     short ip = 0;
 
+    public void setIp(short ip) {
+        this.ip = ip;
+    }
+
     public static StackFrame create(@NonNull KlassDesc klass, @NonNull MethodDesc methodMeta) {
         Value[] locals = new Value[methodMeta.maxLocals()];
 
@@ -97,14 +101,18 @@ public class StackFrame {
         Value[] locals = new Value[methodDesc.maxLocals()];
         Jtype[] methodParamTypes = methodDesc.descriptor().paarameterTypes();
 
+        int expected = methodParamTypes.length;
+        if (!methodDesc.fStatic()) {
+            expected++;
+        }
         int passed = 0;
 
-        for (int i = locals.length - 1; i >= 0 && !stack.isEmpty(); i--) {
+        for (int i = expected - 1; i >= 0 && !stack.isEmpty(); i--) {
             locals[i] = this.pop();
             passed++;
         }
 
-        if (passed < methodParamTypes.length) {
+        if (passed != expected) {
             throw StackFrame.Exception.create(
                     "Error while preraring method call arguments for method %s%s%nExpected %d arguments%n%s%nbut passed %d%n%s%n%n".formatted(
                             klass.name(),
@@ -112,7 +120,7 @@ public class StackFrame {
                             methodParamTypes.length,
                             Arrays.stream(methodParamTypes).map(a -> " " + a.toString()).collect(joining("\n")),
                             passed,
-                            Arrays.stream(locals).limit(passed).map(a -> " " + a.toString()).collect(joining("\n"))
+                            Arrays.stream(locals).filter(Objects::nonNull).limit(passed).map(a -> " " + a.toString()).collect(joining("\n"))
                     ),
                     this);
         }

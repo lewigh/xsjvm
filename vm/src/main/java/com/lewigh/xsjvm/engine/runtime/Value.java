@@ -2,7 +2,6 @@ package com.lewigh.xsjvm.engine.runtime;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.ToString;
 
 public sealed interface Value {
 

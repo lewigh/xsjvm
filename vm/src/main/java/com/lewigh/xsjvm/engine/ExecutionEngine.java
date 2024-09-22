@@ -11,10 +11,7 @@ import com.lewigh.xsjvm.mem.VmMemoryManager;
 import com.lewigh.xsjvm.support.Logger;
 import lombok.NonNull;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import static com.lewigh.xsjvm.SymbolTable.ENTRY_POINT_METHOD_DESC;
 import static com.lewigh.xsjvm.SymbolTable.ENTRY_POINT_METHOD_NAME;
@@ -67,8 +64,8 @@ public class ExecutionEngine {
             Logger.invoke(frame);
 
             loop:
-            for (int i = frame.ip; i < method.instructions().length; i++) {
-
+            for (var i = frame.ip; i < method.instructions().length; i++) {
+                frame.setIp(i);
                 var instruction = method.instructions()[i];
                 var opCode = instruction.opCode();
 
@@ -204,6 +201,7 @@ public class ExecutionEngine {
                     }
                     case NEW -> newObject(threadStack, frame, instruction);
                     case NEWARRAY -> newArray(frame, instruction);
+                    case ANEWARRAY -> newReferenceArray(threadStack, frame, instruction);
                     case BIPUSH -> {
                         frame.inc();
                         frame.push(new Value.Byte((byte) instruction.firstOperand()));
@@ -229,10 +227,22 @@ public class ExecutionEngine {
                         short localId = instruction.firstOperand();
                         frame.popAndStoreTo(localId);
                     }
+                    case ALOAD -> {
+                        frame.inc();
+
+                        short operand = instruction.firstOperand();
+
+                        frame.push(frame.load(operand));
+                    }
                     case ALOAD_0 -> {
                         frame.inc();
 
                         frame.push(frame.load(0));
+                    }
+                    case ALOAD_1 -> {
+                        frame.inc();
+
+                        frame.push(frame.load(1));
                     }
                     case IASTORE -> storeArrayElement(frame, Jtype.Primitive.INT);
                     case BASTORE -> storeArrayElement(frame, Jtype.Primitive.BYTE);
@@ -291,6 +301,38 @@ public class ExecutionEngine {
                     }
                     case ARRAYLENGTH -> arrayLength(frame);
                     case ATHROW -> aThrow(frame);
+                    case INSTANCEOF -> {
+                        frame.inc();
+                        Value val = frame.pop();
+                        if (val instanceof Value.Ref ref) {
+                            if (ref.isNull()) {
+                                frame.push(new Value.Bool(false));
+                            } else {
+                                long objAddress = val.asRef();
+                                int classId = memoryManager.getClassId(objAddress);
+                                KlassDesc refKlass = classLoader.load(classId);
+
+                                short operand = instruction.firstOperand();
+                                ConstantPool cp = frame.getPool();
+                                String className = cp.resolveClassRef(operand);
+                                KlassDesc targetClass = getClass(className, threadStack);
+
+                                if (targetClass.id() == refKlass.id()) {
+                                    frame.push(new Value.Bool(true));
+                                } else {
+                                    if (targetClass.isInterface() && hasTargetInterface(targetClass, refKlass)) {
+                                        frame.push(new Value.Bool(true));
+                                    } else {
+                                        if (hasTargetSuperKlass(targetClass, refKlass)) {
+                                            frame.push(new Value.Bool(true));
+                                        } else {
+                                            frame.push(new Value.Bool(false));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                     default -> throw StackFrame.Exception.create("Unrecognized operation %s".formatted(opCode), frame);
                 }
             }
@@ -300,6 +342,52 @@ public class ExecutionEngine {
         } catch (Exception e) {
             throw ThreadStack.Exception.create(threadStack, e);
         }
+    }
+
+    private boolean hasTargetSuperKlass(KlassDesc targetKlass, KlassDesc refKlass) {
+        KlassDesc superKlassDesc = refKlass.superKlass();
+        while (superKlassDesc != null) {
+            if (superKlassDesc.id() == targetKlass.id()) {
+                return true;
+            }
+            superKlassDesc = superKlassDesc.superKlass();
+        }
+
+        return false;
+    }
+
+    private boolean hasTargetInterface(KlassDesc target, KlassDesc[] interfaces) {
+        if (interfaces.length == 0) {
+            return false;
+        }
+
+        ArrayDeque<KlassDesc> queue = new ArrayDeque<>();
+        Collections.addAll(queue, interfaces);
+
+        while (!queue.isEmpty()) {
+            KlassDesc klassDesc = queue.pollFirst();
+            if (klassDesc.id() == target.id()) {
+                return true;
+            }
+
+            Collections.addAll(queue, klassDesc.interfaces());
+        }
+
+        return false;
+    }
+
+    private boolean hasTargetInterface(KlassDesc target, KlassDesc ref) {
+        KlassDesc[] interfaces = ref.interfaces();
+        if (hasTargetInterface(target, interfaces)) {
+            return true;
+        }
+
+        KlassDesc superKlassDesc = ref.superKlass();
+        if (superKlassDesc != null) {
+            return hasTargetInterface(target, superKlassDesc);
+        }
+
+        return false;
     }
 
     private static void ldc(StackFrame frame, Instruction instruction) {
@@ -405,6 +493,17 @@ public class ExecutionEngine {
         var value = (Number) frame.pop().getVal();
 
         memoryManager.putWithType(address, type, value);
+    }
+
+    private void instanceOf(StackFrame frame, Instruction instruction, ThreadStack threadStack) {
+        frame.inc();
+
+        ClassAndFieldDesc classAndFieldDesc = obtainField(frame, instruction, threadStack);
+
+        long objRef = frame.pop().asRef();
+        ConstantPool cp = frame.getPool();
+
+
     }
 
     private void getStatic(StackFrame frame, Instruction instruction, ThreadStack threadStack) {
@@ -520,6 +619,33 @@ public class ExecutionEngine {
 
         frame.push(Value.Ref.from(arrayRef));
 
+    }
+
+    private void newReferenceArray(ThreadStack threadStack, StackFrame frame, Instruction instruction) {
+        frame.inc();
+
+        var s = frame.pop();
+
+        int size = s instanceof Value.Byte b ? b.value() : s.asInt();
+
+        if (size < 0) {
+            throw new NegativeArraySizeException();
+        }
+
+        short operand = instruction.firstOperand();
+        var cp = frame.getPool();
+        var classRef = cp.resolveClassRef(operand);
+        KlassDesc klassDesc = getClass(classRef, threadStack);
+        Collection<FieldDesc> fieldDescValues = klassDesc.fieldGroup().fields().values().stream().filter(a -> !a.accStatic()).toList();
+
+        long arrayRef = memoryManager.allocateArray(
+                klassDesc.id(),
+                fieldDescValues,
+                klassDesc.fieldGroup().instanceSize(),
+                size
+        );
+
+        frame.push(Value.Ref.from(arrayRef));
     }
 
     private void aThrow(StackFrame frame) {

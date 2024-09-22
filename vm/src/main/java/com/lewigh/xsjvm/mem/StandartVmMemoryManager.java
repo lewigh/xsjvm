@@ -81,6 +81,36 @@ public class StandartVmMemoryManager implements VmMemoryManager {
     }
 
     @Override
+    public long allocateArray(int classId, Collection<FieldDesc> fields, long payloadSize, int size) {
+        long totalSize = OBJECT_HEADERS_SIZE + computeTotalObjectSize(payloadSize) * size;
+
+        long objectAddress = allocator.allocate(totalSize);
+
+        long cursor = objectAddress;
+
+        cursor += MARK_WORD_HEADER_SIZE;
+
+        allocator.putInt(cursor, classId);
+
+        cursor += CLASS_WORD_HEADER_SIZE;
+
+        allocator.putInt(cursor, size);
+
+        cursor += ARRAY_HEADER_SIZE;
+
+        for (int i = 0; i < size; i++) {
+            for (var field : fields) {
+                var type = field.type().primitive();
+
+                initWithType(cursor, type);
+                cursor += type.getAlign().getTotal();
+            }
+        }
+
+        return objectAddress;
+    }
+
+    @Override
     public void setArrayElement(long address, int index, Jtype.Primitive type, Number value) throws MemoryManagmentException {
         try {
             var cursor = address + OBJECT_HEADERS_SIZE + ARRAY_HEADER_SIZE;

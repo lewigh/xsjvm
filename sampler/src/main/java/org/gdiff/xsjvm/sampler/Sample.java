@@ -24,6 +24,11 @@ public class Sample {
 
         float v = tryCatch();
 
+//        Point p = new Point(3, 4);
+        Obj aObj = new Obj();
+        boolean inst = aObj instanceof D;
+
+//        boolean inst = p instanceof D;
 //        throwE();
     }
 
