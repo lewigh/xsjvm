@@ -13,6 +13,8 @@ public interface VmMemoryManager {
 
     long allocateArray(Jtype.Primitive type, int size) throws MemoryManagmentException;
 
+    long allocateArray(int classId, Collection<FieldDesc> fields, long payloadSize, int size);
+
     void setArrayElement(long address, int index, Jtype.Primitive type, Number value) throws MemoryManagmentException;
 
     Value getArrayElement(long address, int index, Jtype.Primitive type) throws MemoryManagmentException;

@@ -1,14 +1,16 @@
 package com.lewigh.xsjvm.engine.runtime;
 
-import com.lewigh.xsjvm.engine.InvokeType;
 import com.lewigh.xsjvm.classloader.reader.flag.ClassAccessFlag;
 import com.lewigh.xsjvm.classloader.reader.pool.ConstantPool;
+import com.lewigh.xsjvm.engine.InvokeType;
 
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 import static com.lewigh.xsjvm.SymbolTable.CLINIT_METH_FULL_NAME;
+import static com.lewigh.xsjvm.classloader.reader.flag.ClassAccessFlag.ACC_INTERFACE;
 
 public record KlassDesc(
         int id,
@@ -80,6 +82,11 @@ public record KlassDesc(
 //        if (invokeType == InvokeType.STATIC && !methodMeta.fStatic()) {
 //            throw new IllegalArgumentException("Method %s is not found".formatted(name));
 //        }
+    }
+
+    public boolean isInterface() {
+        return Stream.of(this.accessFlags)
+                .anyMatch(af -> af == ACC_INTERFACE);
     }
 
     @Override

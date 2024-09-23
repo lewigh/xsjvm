@@ -14,6 +14,7 @@ import static com.lewigh.xsjvm.classloader.reader.resolvers.DescriptorResolver.r
 import static com.lewigh.xsjvm.classloader.reader.resolvers.DescriptorResolver.resolveType;
 import static com.lewigh.xsjvm.engine.runtime.Access.*;
 import static java.util.Objects.requireNonNullElseGet;
+import static java.util.Optional.ofNullable;
 
 public class AppClassLoader {
 
@@ -25,6 +26,11 @@ public class AppClassLoader {
         this.classPath = classPath;
         this.reader = reader;
         this.classStorage = classStorage;
+    }
+
+    public KlassDesc load(int classId) {
+        return ofNullable(classStorage.getById(classId))
+                .orElseThrow(() -> new IllegalArgumentException("class not found"));
     }
 
 
@@ -87,7 +93,7 @@ public class AppClassLoader {
         KlassDesc[] interfaces = new KlassDesc[interfacesNames.length];
 
         for (int i = 0; i < interfaces.length; i++) {
-            interfaces[i] = load(interfacesNames[0]);
+            interfaces[i] = load(interfacesNames[i]);
         }
 
         return interfaces;
