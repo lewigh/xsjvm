@@ -55,6 +55,17 @@ public class StackFrame {
         return poll;
     }
 
+    @NonNull
+    public Value peek() {
+        Value peeked = stack.peek();
+
+        if (peeked == null) {
+            throw Exception.create("Stack value can not be null", this);
+        }
+
+        return peeked;
+    }
+
     public Value.Int popInt() {
         Value popped = pop();
         if (popped instanceof Value.Int i) {

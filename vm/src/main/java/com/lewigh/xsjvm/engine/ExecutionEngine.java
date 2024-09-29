@@ -102,7 +102,7 @@ public class ExecutionEngine {
                         frame.inc();
                         frame.push(new Value.Float(2.0f));
                     }
-                    case LDC -> ldc(frame, instruction);
+                    case LDC, LDC_W -> ldc(frame, instruction);
                     case ISTORE -> {
                         frame.inc();
 
@@ -301,38 +301,8 @@ public class ExecutionEngine {
                     }
                     case ARRAYLENGTH -> arrayLength(frame);
                     case ATHROW -> aThrow(frame);
-                    case INSTANCEOF -> {
-                        frame.inc();
-                        Value val = frame.pop();
-                        if (val instanceof Value.Ref ref) {
-                            if (ref.isNull()) {
-                                frame.push(new Value.Bool(false));
-                            } else {
-                                long objAddress = val.asRef();
-                                int classId = memoryManager.getClassId(objAddress);
-                                KlassDesc refKlass = classLoader.load(classId);
-
-                                short operand = instruction.firstOperand();
-                                ConstantPool cp = frame.getPool();
-                                String className = cp.resolveClassRef(operand);
-                                KlassDesc targetClass = getClass(className, threadStack);
-
-                                if (targetClass.id() == refKlass.id()) {
-                                    frame.push(new Value.Bool(true));
-                                } else {
-                                    if (targetClass.isInterface() && hasTargetInterface(targetClass, refKlass)) {
-                                        frame.push(new Value.Bool(true));
-                                    } else {
-                                        if (hasTargetSuperKlass(targetClass, refKlass)) {
-                                            frame.push(new Value.Bool(true));
-                                        } else {
-                                            frame.push(new Value.Bool(false));
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    case INSTANCEOF -> instanceOf(frame, instruction, threadStack);
+                    case CHECKCAST -> checkCast(frame, instruction, threadStack);
                     default -> throw StackFrame.Exception.create("Unrecognized operation %s".formatted(opCode), frame);
                 }
             }
@@ -495,15 +465,70 @@ public class ExecutionEngine {
         memoryManager.putWithType(address, type, value);
     }
 
-    private void instanceOf(StackFrame frame, Instruction instruction, ThreadStack threadStack) {
+    private void checkCast(StackFrame frame, Instruction instruction, ThreadStack threadStack) {
         frame.inc();
 
-        ClassAndFieldDesc classAndFieldDesc = obtainField(frame, instruction, threadStack);
+        Value peekedValue = frame.peek();
+        if (peekedValue instanceof Value.Ref ref && !ref.isNull()) {
+            short operand = instruction.firstOperand();
+            ConstantPool cp = frame.getPool();
+            String targetClassName = cp.resolveClassRef(operand);
+            KlassDesc targetKlassDesc = getClass(targetClassName, threadStack);
 
-        long objRef = frame.pop().asRef();
-        ConstantPool cp = frame.getPool();
+            long refAddress = peekedValue.asRef();
+            int refClassId = memoryManager.getClassId(refAddress);
+            KlassDesc refKlassDesc = classLoader.load(refClassId);
 
+            boolean castable = false;
+            if (targetKlassDesc.id() == refKlassDesc.id()) {
+                castable = true;
+            } else {
+                if (targetKlassDesc.isInterface() && hasTargetInterface(targetKlassDesc, refKlassDesc)) {
+                    castable = true;
+                } else {
+                    if (hasTargetSuperKlass(targetKlassDesc, refKlassDesc)) {
+                        castable = true;
+                    }
+                }
+            }
 
+            if (!castable) {
+                throw new ClassCastException("Class %s cannot cast to class %s.".formatted(refKlassDesc.name(), targetKlassDesc.name()));
+            }
+        }
+    }
+
+    private void instanceOf(StackFrame frame, Instruction instruction, ThreadStack threadStack) {
+        frame.inc();
+        Value val = frame.pop();
+        if (val instanceof Value.Ref ref) {
+            if (ref.isNull()) {
+                frame.push(new Value.Bool(false));
+            } else {
+                long objAddress = val.asRef();
+                int classId = memoryManager.getClassId(objAddress);
+                KlassDesc refKlass = classLoader.load(classId);
+
+                short operand = instruction.firstOperand();
+                ConstantPool cp = frame.getPool();
+                String className = cp.resolveClassRef(operand);
+                KlassDesc targetClass = getClass(className, threadStack);
+
+                if (targetClass.id() == refKlass.id()) {
+                    frame.push(new Value.Bool(true));
+                } else {
+                    if (targetClass.isInterface() && hasTargetInterface(targetClass, refKlass)) {
+                        frame.push(new Value.Bool(true));
+                    } else {
+                        if (hasTargetSuperKlass(targetClass, refKlass)) {
+                            frame.push(new Value.Bool(true));
+                        } else {
+                            frame.push(new Value.Bool(false));
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private void getStatic(StackFrame frame, Instruction instruction, ThreadStack threadStack) {
