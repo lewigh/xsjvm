@@ -28,7 +28,9 @@ public class Sample {
         Obj aObj = new Obj();
         boolean inst = aObj instanceof D;
 
-//        boolean inst = p instanceof D;
+        SuperObj sup = new Obj();
+        var castObj = (Obj) sup;
+
 //        throwE();
     }
 
